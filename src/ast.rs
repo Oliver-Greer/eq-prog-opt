@@ -2,6 +2,8 @@ use crate::Result;
 
 type Name = String;
 
+#[derive(Clone)]
+#[derive(PartialEq)]
 pub enum Term {
     Var(Name),
     Num(i64),
@@ -95,4 +97,15 @@ pub struct Rewrite {
 
 pub struct Optimize {
     pub term: Term,
+}
+
+
+impl Clone for Rewrite {
+    fn clone(&self) -> Self {
+        Rewrite { 
+            name: self.name.clone(), 
+            lhs: self.lhs.clone(), 
+            rhs: self.rhs.clone() 
+        }
+    }
 }

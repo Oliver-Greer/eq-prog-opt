@@ -5,6 +5,8 @@
 (function Add (Math Math) Math)
 (function Mul (Math Math) Math)
 
+;; (property IsEven (Math) Bool)
+
 ;; add comm/assoc
 (rewrite (Add ?a ?b)
          (Add ?b ?a))
@@ -41,6 +43,6 @@
 		 (Num (* ?a ?b)))
 
 (optimize (Add (Num 1) (Num 2)))
-(optimize (Add (Num 0) (Add (Num 0) (Var "x"))))
+(optimize (Mul (Num 0) (Add (Num 0) (Var "x"))))
 
 

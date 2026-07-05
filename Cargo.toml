@@ -6,3 +6,9 @@ edition = "2024"
 [dependencies]
 egg = "0.11.0"
 peg = "0.8"
+rand = "0.10.2"
+
+[features]
+default = ['math']
+math = []
+all = ['math']

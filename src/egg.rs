@@ -8,7 +8,7 @@ define_language! {
     pub enum Lang {
         Num(i64),
         "+" = Add([Id; 2]),
-        "-" = Sub([Id; 2]),
+        "*" = Mul([Id; 2]),
         Call(Symbol, Vec<Id>),
     }
 }
@@ -29,10 +29,10 @@ impl ::egg::Analysis<Lang> for MyAnalysis {
                 let b = egraph[*b].data?;
                 Some(a + b)
             }
-            Lang::Sub([a, b]) => {
+            Lang::Mul([a, b]) => {
                 let a = egraph[*a].data?;
                 let b = egraph[*b].data?;
-                Some(a - b)
+                Some(a * b)
             }
             Lang::Call(_, _) => None,
         }
@@ -80,7 +80,7 @@ fn term_to_pattern_rec(term: &Term, pat: &mut PatternAst<Lang>) -> Id {
             let children: Vec<Id> = terms.iter().map(|t| term_to_pattern_rec(t, pat)).collect();
             let node = match f.as_str() {
                 "+" => Lang::Add([children[0], children[1]]),
-                "-" => Lang::Sub([children[0], children[1]]),
+                "*" => Lang::Mul([children[0], children[1]]),
                 _ => Lang::Call(f.parse().unwrap(), children),
             };
             pat.add(ENodeOrVar::ENode(node))
@@ -99,9 +99,9 @@ fn recexpr_to_term(expr: &RecExpr<Lang>, id: Id) -> Term {
             let terms = children.iter().map(|&c| recexpr_to_term(expr, c)).collect();
             Term::Call("+".into(), terms)
         }
-        Lang::Sub(children) => {
+        Lang::Mul(children) => {
             let terms = children.iter().map(|&c| recexpr_to_term(expr, c)).collect();
-            Term::Call("-".into(), terms)
+            Term::Call("*".into(), terms)
         }
     }
 }
@@ -111,25 +111,25 @@ impl Solver for EggSolver {
         Default::default()
     }
 
-    fn declare_sort(&mut self, _sort: &Sort) -> Result<()> {
+    fn declare_sort(&mut self, _sort: Sort) -> Result<()> {
         Ok(())
     }
 
-    fn declare_function(&mut self, _func: &Function) -> Result<()> {
+    fn declare_function(&mut self, _func: Function) -> Result<()> {
         Ok(())
     }
 
-    fn declare_rewrite(&mut self, rewrite: &Rewrite) -> Result<()> {
-        let lhs = term_to_pattern(&rewrite.lhs);
-        let rhs = term_to_pattern(&rewrite.rhs);
+    fn declare_rewrite(&mut self, rewrite: Rewrite) -> Result<()> {
+        let lhs: Pattern<Lang> = term_to_pattern(&rewrite.lhs);
+        let rhs: Pattern<Lang> = term_to_pattern(&rewrite.rhs);
 
-        let egg_rw = EggRewrite::new(&rewrite.name, lhs, rhs).map_err(|e| e.to_string())?;
+        let egg_rw: ::egg::Rewrite<Lang, MyAnalysis> = EggRewrite::new(&rewrite.name, lhs, rhs).map_err(|e| e.to_string())?;
         self.rules.push(egg_rw);
         Ok(())
     }
 
-    fn optimize(&mut self, optimize: &Optimize) -> Result<Term> {
-        let pat = term_to_pattern(&optimize.term);
+    fn optimize(&mut self, optimize: Optimize) -> Result<Term> {
+        let pat: Pattern<Lang> = term_to_pattern(&optimize.term);
         let term: RecExpr<Lang> = pat
             .ast
             .iter()
@@ -142,9 +142,9 @@ impl Solver for EggSolver {
             .collect();
 
         self.runner = Runner::default().with_expr(&term).run(&self.rules);
-        let ext = Extractor::new(&self.runner.egraph, AstSize);
+        let ext: Extractor<'_, AstSize, Lang, MyAnalysis> = Extractor::new(&self.runner.egraph, AstSize);
         let (_best_cost, best_expr) = ext.find_best(self.runner.roots[0]);
-        let best_term = recexpr_to_term(&best_expr, best_expr.root());
+        let best_term: Term = recexpr_to_term(&best_expr, best_expr.root());
         Ok(best_term)
     }
 }
