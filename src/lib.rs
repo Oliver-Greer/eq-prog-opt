@@ -9,6 +9,7 @@ pub trait Solver: Sized {
     fn new() -> Self;
     fn declare_sort(&mut self, sort: Sort) -> Result<()>;
     fn declare_function(&mut self, func: Function) -> Result<()>;
+    fn declare_property(&mut self, prop: Property) -> Result<()>;
     fn declare_rewrite(&mut self, rewrite: Rewrite) -> Result<()>;
     fn optimize(&mut self, optimize: Optimize) -> Result<Term>;
     fn run_program(prog: Program) -> Result<Vec<Term>> {

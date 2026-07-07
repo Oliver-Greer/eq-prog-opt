@@ -49,7 +49,7 @@ Functions provide a richer type that maps a list of argument sorts to a return s
 ```
 (function FunctionSort (ArgSort1 ArgSort2 ... ArgSortN) ReturnSort)
 ```
-Functions also can take a 4th argument specifying the cost. This can be used for fancier cost functions than simply AST size. This design also allows the cost to be a function itself. The default cost assumed if a cost argument is not given is `(Num 1)`.
+Functions also can take a 4th argument specifying the cost. This can be used for fancier cost functions than simply AST size. The default cost assumed if a cost argument is not given is `1`.
 
 Importantly, while declared function names can be used anywhere in the benchmark file, the implementation of these functions is left entirely up to the optimization implementation.
 
@@ -67,14 +67,14 @@ Properties provide a way to express analyses that propagate through rewrites. Th
 
 ### Rewrites
 
-Rewrites are declared with the either the `rewrite` keyword or the `birewrite` keyword. The difference between the two is self evident. Again enforcing this difference correctly is intentionally left up to the user. Rewrites at minimum require a left hand side and a right hand size, with an optional condition as a third argument. Symbolic variables that can match any expression are defined with a `?`, reminiscent of the egg toolkit syntax.
+Rewrites are declared with the either the `rewrite` keyword or the `birewrite` keyword. The difference between the two is self evident. Again enforcing this difference correctly is intentionally left up to the user. Rewrites at minimum require a left hand side and a right hand size, with an optional condition as a third argument. Rewrites can also be named. Symbolic variables that can match any expression are defined with a `?`, reminiscent of the egg toolkit syntax.
 
 ```
-(rewrite (Mul (Num 0) ?a) (Num 0))
+(rewrite MulCancel (Mul (Num 0) ?a) (Num 0))
 
 (birewrite (Div ?x ?x) (Num 1) (IsNonZero ?x))
 ```
-Eventually rewrites will also support properties within the terms.
+Rewrites can also support conditional terms.
 ```
 (rewrite (LessThan (UpperBound ?x) (Num 0)) (IsNonZero ?x))
 ```
