@@ -6,10 +6,11 @@
 //! Comment         -> ';' [^'\n']* ('\n' | EOF)
 //! WhiteSpace      -> (WhiteSpaceChar | Comment)*
 //! Identifier      -> !(WhiteSpace | '(' | ')' | ';')
+//! Variable        -> '?' Identifier
 //! IntegerLiteral  -> '-'? [0..9]+
 //! StringLiteral   -> '"' [_] '"'
 //! BoolLiteral     -> 'True' | 'False'
-//! TermAtom        -> BoolLiteral | Identifier | IntegerLiteral | StringLiteral
+//! TermAtom        -> BoolLiteral | IntegerLiteral | StringLiteral | Variable | Identifier
 //! TermList        -> '(' WhiteSpace Identifier (WhiteSpace TermAtom)* WhiteSpace ')'
 //! Term            -> TermList | TermAtom
 //! SortDecl        -> '(' WhiteSpace 'sort' WhiteSpace Identifier WhiteSpace ')'
@@ -19,7 +20,13 @@
 //! PropertyDecl    -> (' WhiteSpace 'property' WhiteSpace Identifier WhiteSpace
 //!                     '(' (WhiteSpace Identifier)* WhiteSpace ')'
 //!                     WhiteSpace Identifier WhiteSpace ')'
-//! RewriteDecl     -> 
+//! 
+//! TODO: Support properties as well as terms
+//! RewriteDecl     -> '(' WhiteSpace 'rewrite' WhiteSpace Term WhiteSpace Term WhiteSpace ')'
+//!                    | '(' WhiteSpace 'birewrite' WhiteSpace Term WhiteSpace Term WhiteSpace ')'
+//!                    | '(' WhiteSpace 'rewrite' WhiteSpace Term WhiteSpace Term WhiteSpace Term WhiteSpace ')'
+//!                    | '(' WhiteSpace 'birewrite' WhiteSpace Term WhiteSpace Term WhiteSpace Term WhiteSpace ')'
+//! Optimize        -> '(' WhiteSpace 'optimize' WhiteSpace Term WhiteSpace ')'
 
 use crate::*;
 

@@ -74,7 +74,7 @@ Rewrites are declared with the either the `rewrite` keyword or the `birewrite` k
 
 (birewrite (Div ?x ?x) (Num 1) (IsNonZero ?x))
 ```
-Rewrites can also use properties within the terms.
+Eventually rewrites will also support properties within the terms.
 ```
 (rewrite (LessThan (UpperBound ?x) (Num 0)) (IsNonZero ?x))
 ```
