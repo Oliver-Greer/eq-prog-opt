@@ -1,6 +1,8 @@
 use crate::*;
 use rand::RngExt;
 
+/// TODO: Create pattern matching implementation for vars
+
 #[derive(Default)]
 pub struct SLS {
     rules: Vec<Rewrite>

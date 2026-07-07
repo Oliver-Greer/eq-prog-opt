@@ -6,7 +6,9 @@ type Name = String;
 #[derive(PartialEq)]
 pub enum Term {
     Var(Name),
-    Num(i64),
+    IntLit(i64),
+    StringLit(String),
+    BoolLit(bool),
     Call(Name, Vec<Term>),
 }
 
@@ -14,14 +16,15 @@ impl std::fmt::Display for Term {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Term::Var(v) => write!(f, "{}", v),
-            Term::Num(n) => write!(f, "{}", n),
+            Term::IntLit(n) => write!(f, "{}", n),
             Term::Call(func, args) => {
                 write!(f, "({}", func)?;
                 for arg in args {
                     write!(f, " {}", arg)?;
                 }
                 write!(f, ")")
-            }
+            },
+            _ => Ok(())
         }
     }
 }
@@ -97,15 +100,4 @@ pub struct Rewrite {
 
 pub struct Optimize {
     pub term: Term,
-}
-
-
-impl Clone for Rewrite {
-    fn clone(&self) -> Self {
-        Rewrite { 
-            name: self.name.clone(), 
-            lhs: self.lhs.clone(), 
-            rhs: self.rhs.clone() 
-        }
-    }
 }

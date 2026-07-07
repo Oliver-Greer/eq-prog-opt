@@ -1,3 +1,26 @@
+//! Parser for the benchmark file specification.
+//! 
+//! The benchmark DSL has the following grammar:
+//! 
+//! WhiteSpaceChar  -> ' ' | '\t' | '\n' | '\r'
+//! Comment         -> ';' [^'\n']* ('\n' | EOF)
+//! WhiteSpace      -> (WhiteSpaceChar | Comment)*
+//! Identifier      -> !(WhiteSpace | '(' | ')' | ';')
+//! IntegerLiteral  -> '-'? [0..9]+
+//! StringLiteral   -> '"' [_] '"'
+//! BoolLiteral     -> 'True' | 'False'
+//! TermAtom        -> BoolLiteral | Identifier | IntegerLiteral | StringLiteral
+//! TermList        -> '(' WhiteSpace Identifier (WhiteSpace TermAtom)* WhiteSpace ')'
+//! Term            -> TermList | TermAtom
+//! SortDecl        -> '(' WhiteSpace 'sort' WhiteSpace Identifier WhiteSpace ')'
+//! FuncDecl        -> (' WhiteSpace 'function' WhiteSpace Identifier WhiteSpace
+//!                     '(' (WhiteSpace Identifier)* WhiteSpace ')'
+//!                     WhiteSpace Identifier (WhiteSpace Identifier WhiteSpace | WhiteSpace) ')'
+//! PropertyDecl    -> (' WhiteSpace 'property' WhiteSpace Identifier WhiteSpace
+//!                     '(' (WhiteSpace Identifier)* WhiteSpace ')'
+//!                     WhiteSpace Identifier WhiteSpace ')'
+//! RewriteDecl     -> 
+
 use crate::*;
 
 peg::parser! {
@@ -21,7 +44,7 @@ peg::parser! {
             = "\"" s:$([^'\"']*) "\"" { s.to_string() }
 
         rule term_atom() -> Term
-            = n:int_lit() { Term::Num(n) }
+            = n:int_lit() { Term::IntLit(n) }
             / s:string_lit() { Term::Call(s, vec![]) }
             / v:atom_text() { Term::Var(v) }
 

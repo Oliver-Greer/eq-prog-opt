@@ -1,11 +1,7 @@
 mod ast;
-mod egg;
-mod stochastic;
 pub mod parse;
 
 use ast::*;
-pub use egg::EggSolver;
-pub use stochastic::SLS;
 
 pub type Result<T> = std::result::Result<T, String>;
 
@@ -43,18 +39,5 @@ pub trait Solver: Sized {
     fn parse_file_and_run(path: &str) -> Result<Vec<Term>> {
         let prog: Program = Program::from_file(path)?;
         Self::run_program(prog)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_math() {
-        let results = crate::egg::EggSolver::parse_file_and_run("benchmarks/math.lisp").unwrap();
-        for result in results {
-            println!("Result: {}", result);
-        }
     }
 }
