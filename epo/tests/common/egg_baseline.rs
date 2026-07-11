@@ -1,3 +1,9 @@
+/// Simple egg baseline for a selection of benchmarks
+/// Supports both = and != as conditional calls, and +, -, *, and / for constant folding
+/// Code needs significant cleanup and work, but provides a working prototype
+/// Next step is adding basic numerical costs to AST nodes 
+/// and automatically supporting birewrites
+
 use egg::{Condition, ConditionEqual};
 use ::egg::{AstSize, ConditionalApplier, DidMerge, ENodeOrVar, Extractor, RecExpr};
 use ::egg::{Id, Pattern, PatternAst, Runner};
@@ -237,7 +243,7 @@ impl Solver for EggSolver {
                         // assume only = for now
                         Some((name, term_to_pattern(&args[0]), term_to_pattern(&args[1])))
                     }
-                    // this shouldn't be the case
+                    // this shouldn't ever be the case (why have just a true or false condition), throw error?
                     _ => None
                 }
             }
@@ -279,6 +285,7 @@ impl Solver for EggSolver {
             })
             .collect();
 
+        // Uses basic AstSize for now, which may not provide the best solution
         self.runner = Runner::default().with_expr(&term).run(&self.rules);
         let ext = Extractor::new(&self.runner.egraph, AstSize);
         let (_best_cost, best_expr) = ext.find_best(self.runner.roots[0]);

@@ -11,26 +11,22 @@
 ;; get rows and columns
 (rewrite GetRows
     (Rows (MakeMatrix ?name ?r ?c))
-    ?r
-)
+    ?r)
 (rewrite GetCols
     (Cols (MakeMatrix ?name ?r ?c))
-    ?c
-)
+    ?c)
 
 ;; associativity
 (rewrite Associativity
     (MatMul (MatMul ?A ?B) ?C) 
     (MatMul ?A (MatMul ?B ?C)) 
-    :when (= (Cols ?B) (Rows ?C))
-)
+    :when (= (Cols ?B) (Rows ?C)))
 
 ;; otherway, will use birewrite later
 (rewrite AssociativityRight
     (MatMul ?A (MatMul ?B ?C)) 
     (MatMul (MatMul ?A ?B) ?C)
-    :when (= (Cols ?A) (Rows ?B))
-)
+    :when (= (Cols ?A) (Rows ?B)))
 
 (optimize 
     (MatMul
