@@ -13,7 +13,7 @@ This specification aims to provide features rich enough to express at least the 
 
 ## Language Keywords
 
-### Primitives
+### Primitive Types
 
 The language accepts three primitive types: Int, String, and Bool.
 
@@ -40,6 +40,7 @@ Types used in the benchmark files are declared with the `sort` keyword.
 ```
 (sort Math)
 ```
+
 Primitive sorts are built-in and cannot be re-declared. These tentatively include `String`, `i64`, and `Bool`.
 
 ### Functions
@@ -49,34 +50,19 @@ Functions provide a richer type that maps a list of argument sorts to a return s
 ```
 (function FunctionSort (ArgSort1 ArgSort2 ... ArgSortN) ReturnSort)
 ```
+
 Functions also can take a 4th argument specifying the cost. This can be used for fancier cost functions than simply AST size. The default cost assumed if a cost argument is not given is `1`.
-
-Importantly, while declared function names can be used anywhere in the benchmark file, the implementation of these functions is left entirely up to the optimization implementation.
-
-### Properties
-
-Properties provide a way to express analyses that propagate through rewrites. They also allow for conditional rewrites, which are an important element of the majority of interesting benchmarks. Similarly to the function implementation, properties are expressed in the most general way possible, requiring the implementation to define how propagation is carried out, as well as how rewrite conditions are evaluated. Intuitively these can be thought of as functions from terms to lattices:
-
-```
-;; The general syntax is the following
-(property Name (ArgSort1 ArgSort2 ... ArgSortN) ReturnSort)
-
-;; Math example
-(property IsNonZero (Math) Bool)
-```
 
 ### Rewrites
 
-Rewrites are declared with the either the `rewrite` keyword or the `birewrite` keyword. The difference between the two is self evident. Again enforcing this difference correctly is intentionally left up to the user. Rewrites at minimum require a left hand side and a right hand size, with an optional condition as a third argument. Rewrites can also be named. Symbolic variables that can match any expression are defined with a `?`, reminiscent of the egg toolkit syntax.
+Rewrites are declared with the either the `rewrite` keyword or the `birewrite` keyword. The difference between the two is self evident. Again enforcing this difference correctly is intentionally left up to the user. Rewrites at minimum require a left hand side and a right hand size, with an optional condition as a third argument. Rewrites can also be named. Symbolic variables that can match any term are defined with a `?`, reminiscent of the egg toolkit syntax.
 
 ```
+;; A named rewrite
 (rewrite MulCancel (Mul (Num 0) ?a) (Num 0))
 
-(birewrite (Div ?x ?x) (Num 1) (IsNonZero ?x))
-```
-Rewrites can also support conditional terms.
-```
-(rewrite (LessThan (UpperBound ?x) (Num 0)) (IsNonZero ?x))
+;; A birewrite with a conditional term
+(birewrite (Div ?x ?x) (Num 1) :when (!= ?x 0))
 ```
 
 ### Optimize Calls

@@ -1,18 +1,18 @@
-use crate::*;
-use rand::RngExt;
+use epo::ast::{Function, Optimize, Rewrite, Sort, Term};
+use epo::*;
 
 /// TODO: Create pattern matching implementation for vars
 
 #[derive(Default)]
 pub struct SLS {
-    rules: Vec<Rewrite>
+    rules: Vec<Rewrite>,
 }
 
 impl Solver for SLS {
     fn new() -> Self {
         Default::default()
     }
-    
+
     fn declare_sort(&mut self, sort: Sort) -> Result<()> {
         Ok(())
     }
@@ -22,7 +22,7 @@ impl Solver for SLS {
     }
 
     fn declare_rewrite(&mut self, rewrite: Rewrite) -> Result<()> {
-        self.rules.push(rewrite.clone());
+        self.rules.push(rewrite);
         Ok(())
     }
 

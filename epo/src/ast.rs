@@ -48,9 +48,7 @@ pub struct Optimize {
 #[derive(PartialEq, Debug)]
 pub enum Term {
     Var(Name),
-    Identifier(Name),
     IntLit(i64),
-    StringLit(String),
     BoolLit(bool),
     Call(Name, Vec<Term>),
 }
@@ -111,12 +109,12 @@ impl Program {
     }
 
     pub fn from_str(s: &str) -> Result<Self> {
-        let decls = crate::parse::parse_decls(s)?;
+        let decls: Vec<Decl> = crate::parse::parse_decls(s)?;
         Self::from_decls(decls)
     }
 
     pub fn from_file(path: &str) -> Result<Self> {
-        let src = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+        let src: String = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
         Self::from_str(&src)
     }
 }

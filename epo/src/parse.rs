@@ -3,43 +3,40 @@
 //! The benchmark DSL has the following grammar:
 //!
 //! WhiteSpaceChar  -> ' ' | '\t' | '\n' | '\r'
-//! 
+//!
 //! Comment         -> ';' [^'\n']* ('\n' | EOF)
-//! 
+//!
 //! WhiteSpace      -> (WhiteSpaceChar | Comment)*
-//! 
+//!
 //! Identifier      -> !(WhiteSpace | '(' | ')' | ';')
-//! 
+//!
 //! Variable        -> '?' Identifier
-//! 
+//!
 //! IntegerLiteral  -> '-'? [0..9]+
-//! 
+//!
 //! StringLiteral   -> '"' [_] '"'
-//! 
+//!
 //! BoolLiteral     -> 'True' | 'False'
-//! 
+//!
 //! TermAtom        -> BoolLiteral | IntegerLiteral | StringLiteral | Variable | Identifier
-//! 
+//!
 //! TermList        -> '(' WhiteSpace Identifier (WhiteSpace Term)* WhiteSpace ')'
-//! 
+//!
 //! Term            -> TermList | TermAtom
-//! 
+//!
 //! SortDecl        -> '(' WhiteSpace 'sort' WhiteSpace Identifier WhiteSpace ')'
-//! 
+//!
 //! FuncDecl        -> '(' WhiteSpace 'function' WhiteSpace Identifier WhiteSpace
 //!                         '(' (WhiteSpace Identifier)* WhiteSpace ')'
 //!                         WhiteSpace Identifier (WhiteSpace Identifier WhiteSpace | WhiteSpace) ')'
-//! 
-//! PropertyDecl    -> (' WhiteSpace 'property' WhiteSpace Identifier WhiteSpace
-//!                         '(' (WhiteSpace Identifier)* WhiteSpace ')'
-//!                         WhiteSpace Identifier WhiteSpace ')'
 //!
-//! NOTE: Rewrites can also have names but those are left out here
-//! RewriteDecl     -> '(' WhiteSpace ('rewrite' / 'birewrite') 
+//! NOTE: Rewrites can also have names but those are left out here for conciseness
+//! RewriteDecl     -> '(' WhiteSpace ('rewrite' / 'birewrite')
 //!                         WhiteSpace Term WhiteSpace Term WhiteSpace ')'
-//!                     | '(' WhiteSpace ('rewrite' / 'birewrite') 
-//!                         WhiteSpace Term WhiteSpace Term WhiteSpace Term WhiteSpace ')'
-//! 
+//!                     | '(' WhiteSpace ('rewrite' / 'birewrite')
+//!                         WhiteSpace Term WhiteSpace Term WhiteSpace
+//!                         ":when" WhiteSpace Term WhiteSpace ')'
+//!
 //! Optimize        -> '(' WhiteSpace 'optimize' WhiteSpace Term WhiteSpace ')'
 
 use crate::*;
@@ -56,11 +53,7 @@ peg::parser! {
             = (ws_char() / comment())*
 
         rule identifier() -> String
-            = s:$((!(['(' | ')' | ';' | '?'] / ws_char()) [_])+)
-                                        { s.to_string() }
-
-        rule variable() -> String
-            = "?" s:$(identifier())     { s.to_string() }
+            = s:$((!(['(' | ')' | ';'] / ws_char()) [_])+) { s.to_string() }
 
         rule bool_lit() -> bool
             = b:$("True" / "False")     { b == "True"}
@@ -74,9 +67,8 @@ peg::parser! {
         rule term_atom() -> Term
             = b:bool_lit()              { Term::BoolLit(b) }
             / n:int_lit()               { Term::IntLit(n) }
-            / s:string_lit()            { Term::StringLit(s) }
-            / v:variable()              { Term::Var(v) }
-            / i:identifier()            { Term::Identifier(i) }
+            / s:string_lit()            { Term::Var(s) }
+            / i:identifier()            { Term::Var(i) }
 
         rule term_list() -> Term
             = "(" ws() f:identifier() args:(ws() t:term() { t })* ws() ")" {
@@ -103,15 +95,9 @@ peg::parser! {
                 Decl::Function(Function { name, args, ret, cost: None })
             }
 
-        rule property_decl() -> Decl
-            = "(" ws() "property" ws() name:identifier() ws()
-              "(" args:(ws() a:identifier() { a })* ws() ")" ws()
-              ret:identifier() ws() ")" {
-                Decl::Property(Property { name, args, ret })
-            }
-
         rule rewrite_decl() -> Decl
-            = "(" ws() bid:$("birewrite" / "rewrite") ws() name:identifier() ws() lhs:term() ws() rhs:term() ws() c:term() ws() ")" {
+            = "(" ws() bid:$("birewrite" / "rewrite") ws() name:identifier() ws() lhs:term()
+                ws() rhs:term() ws() ":when" ws() c:term() ws() ")" {
                 Decl::Rewrite(
                     Rewrite {
                         name,
@@ -133,7 +119,7 @@ peg::parser! {
                     }
                 )
             }
-            / "(" ws() bid:$("birewrite" / "rewrite") ws() lhs:term() ws() rhs:term() ws()  c:term() ws() ")" {
+            / "(" ws() bid:$("birewrite" / "rewrite") ws() lhs:term() ws() rhs:term() ws() ":when" ws()  c:term() ws() ")" {
                 Decl::Rewrite(
                     Rewrite {
                         name: String::new(),
@@ -164,7 +150,6 @@ peg::parser! {
         rule decl() -> Decl
             = sort_decl()
             / function_decl()
-            / property_decl()
             / rewrite_decl()
             / optimize_decl()
 
@@ -236,20 +221,6 @@ mod tests {
     }
 
     #[test]
-    fn parse_prop() {
-        // intentionally testing whitespace
-        let input: &str = "(property \n MyName \t (Sort1 \n Sort2  \t) \t Ret)";
-        let output: Result<Decl> = parse_decl(input);
-        let expected_output: Decl = Decl::Property(Property {
-            name: "MyName".to_string(),
-            args: vec!["Sort1".to_string(), "Sort2".to_string()],
-            ret: "Ret".to_string(),
-        });
-        assert!(output.is_ok());
-        assert!(output.unwrap() == expected_output);
-    }
-
-    #[test]
     fn parse_rewrite_with_name() {
         // intentionally testing whitespace
         // one way rewrite with name
@@ -257,8 +228,8 @@ mod tests {
         let output: Result<Decl> = parse_decl(input);
         let expected_output: Decl = Decl::Rewrite(Rewrite {
             name: "MyName".to_string(),
-            lhs: Term::Var("a".to_string()),
-            rhs: Term::Var("b".to_string()),
+            lhs: Term::Var("?a".to_string()),
+            rhs: Term::Var("?b".to_string()),
             cond: None,
             is_bidirectional: false,
         });
@@ -273,8 +244,8 @@ mod tests {
         let output: Result<Decl> = parse_decl(input);
         let expected_output: Decl = Decl::Rewrite(Rewrite {
             name: "MyName".to_string(),
-            lhs: Term::Var("a".to_string()),
-            rhs: Term::Var("b".to_string()),
+            lhs: Term::Var("?a".to_string()),
+            rhs: Term::Var("?b".to_string()),
             cond: None,
             is_bidirectional: true,
         });
@@ -285,16 +256,13 @@ mod tests {
     #[test]
     fn parse_rewrite_with_name_and_cond() {
         // one way rewrite with name and cond
-        let input: &str = "(rewrite \n MyName ?a \t ?b (IsNonZero ?a))";
+        let input: &str = "(rewrite \n MyName ?a \t ?b :when True)";
         let output: Result<Decl> = parse_decl(input);
         let expected_output: Decl = Decl::Rewrite(Rewrite {
             name: "MyName".to_string(),
-            lhs: Term::Var("a".to_string()),
-            rhs: Term::Var("b".to_string()),
-            cond: Some(Term::Call(
-                "IsNonZero".to_string(),
-                vec![Term::Var("a".to_string())],
-            )),
+            lhs: Term::Var("?a".to_string()),
+            rhs: Term::Var("?b".to_string()),
+            cond: Some(Term::BoolLit(true)),
             is_bidirectional: false,
         });
         assert!(output.is_ok());
@@ -304,16 +272,13 @@ mod tests {
     #[test]
     fn parse_rewrite_with_cond_no_name() {
         // one way rewrite without name and cond
-        let input: &str = "(rewrite \n ?a \t ?b (IsNonZero ?a))";
+        let input: &str = "(rewrite \n ?a \t ?b :when \t False)";
         let output: Result<Decl> = parse_decl(input);
         let expected_output: Decl = Decl::Rewrite(Rewrite {
             name: String::new(),
-            lhs: Term::Var("a".to_string()),
-            rhs: Term::Var("b".to_string()),
-            cond: Some(Term::Call(
-                "IsNonZero".to_string(),
-                vec![Term::Var("a".to_string())],
-            )),
+            lhs: Term::Var("?a".to_string()),
+            rhs: Term::Var("?b".to_string()),
+            cond: Some(Term::BoolLit(false)),
             is_bidirectional: false,
         });
         assert!(output.is_ok());
