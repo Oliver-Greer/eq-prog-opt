@@ -1,8 +1,6 @@
-[package]
-name = "eq-prog-opt"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
-egg = "0.11.0"
-peg = "0.8"
+[workspace]
+members = [
+    "epo",
+    #"parser"
+]
+resolver = "3"
