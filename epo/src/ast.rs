@@ -21,7 +21,6 @@ pub struct Function {
     pub name: Name,
     pub args: Vec<Name>,
     pub ret: Name,
-    pub cost: Option<i64>,
 }
 
 #[derive(PartialEq, Debug)]
@@ -32,12 +31,17 @@ pub struct Property {
 }
 
 #[derive(PartialEq, Debug)]
-pub struct Rewrite {
+pub enum Rewrite {
+    Rewrite(RewriteVariant),
+    BiRewrite(RewriteVariant),
+}
+
+#[derive(PartialEq, Debug)]
+pub struct RewriteVariant {
     pub name: Name,
     pub lhs: Term,
     pub rhs: Term,
-    pub cond: Option<Term>,
-    pub is_bidirectional: bool,
+    pub cond: Option<Term>
 }
 
 #[derive(PartialEq, Debug)]
@@ -85,8 +89,16 @@ impl Program {
             Decl::Function(f) => self.funcs.push(f),
             Decl::Property(p) => self.props.push(p),
             Decl::Rewrite(mut r) => {
-                // unique-ify rewrite names by appending the current number of rewrites
-                r.name = format!("{}.{}", r.name, self.rewrites.len());
+                match &mut r {
+                    Rewrite::Rewrite(re) => {
+                        // unique-ify rewrite names by appending the current number of rewrites
+                        re.name = format!("{}.{}", re.name, self.rewrites.len());
+                    },
+                    Rewrite::BiRewrite(bire) => {
+                        // unique-ify rewrite names by appending the current number of rewrites
+                        bire.name = format!("{}.{}", bire.name, self.rewrites.len());
+                    }
+                };
                 self.rewrites.push(r)
             }
             Decl::Optimize(o) => self.optimize.push(o),

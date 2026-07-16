@@ -1,5 +1,5 @@
 /// Simple egg baseline for a selection of benchmarks
-/// Supports both = and != as conditional calls, and +, -, *, and / for constant folding
+/// Supports both = and != as conditional functions, and +, -, *, and / for constant folding
 /// Code needs significant cleanup and work, but provides a working prototype
 /// Next step is adding basic numerical costs to AST nodes 
 /// and automatically supporting birewrites
@@ -234,41 +234,18 @@ impl Solver for EggSolver {
     }
 
     fn declare_rewrite(&mut self, rewrite: Rewrite) -> Result<()> {
-        let lhs: Pattern<Lang> = term_to_pattern(&rewrite.lhs);
-        let rhs: Pattern<Lang> = term_to_pattern(&rewrite.rhs);
-        let cond: Option<(String, Pattern<Lang>, Pattern<Lang>)> = match rewrite.cond {
-            Some(c) => {
-                match c {
-                    Term::Call(name, args) => {
-                        // assume only = for now
-                        Some((name, term_to_pattern(&args[0]), term_to_pattern(&args[1])))
-                    }
-                    // this shouldn't ever be the case (why have just a true or false condition), throw error?
-                    _ => None
-                }
+        match rewrite {
+            Rewrite::Rewrite(re) => {
+                let lhs: Pattern<Lang> = term_to_pattern(&re.lhs);
+                let rhs: Pattern<Lang> = term_to_pattern(&re.rhs);
+                //self.rules.push(egg_rw);
+            },
+            Rewrite::BiRewrite(bire) => {
+                let lhs: Pattern<Lang> = term_to_pattern(&bire.lhs);
+                let rhs: Pattern<Lang> = term_to_pattern(&bire.rhs);
+                //self.rules.push(egg_rw);
             }
-            None => None,
-        };
-
-        let egg_rw = match cond {
-            Some(c) => {
-                let eq_cond = ConditionEqual::new(c.1, c.2);
-                let should_flip_cond = c.0 == "!=";
-                EggRewrite::new(
-                    &rewrite.name,
-                    lhs,
-                    ConditionalApplier {
-                        condition: move |egraph: &mut egg::EGraph<Lang, MyAnalysis>, id: Id, subst: &egg::Subst| {
-                            should_flip_cond ^ eq_cond.check(egraph, id, subst)
-                        },
-                        applier: rhs,
-                    },
-                )
-            }
-            .map_err(|e| e.to_string())?,
-            None => EggRewrite::new(&rewrite.name, lhs, rhs).map_err(|e| e.to_string())?,
-        };
-        self.rules.push(egg_rw);
+        }
         Ok(())
     }
 
