@@ -8,7 +8,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_math() {
+    fn test_matmul() {
         let results = EggSolver::parse_file_and_run("../benchmarks/matmul.lisp").unwrap();
         for result in results {
             println!("Result: {}", result);

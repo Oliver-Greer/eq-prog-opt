@@ -5,8 +5,8 @@ type Name = String;
 #[derive(PartialEq, Debug)]
 pub enum Decl {
     Sort(Sort),
-    Function(Function),
-    Property(Property),
+    Constructor(Constructor),
+    Primitive(Primitive),
     Rewrite(Rewrite),
     Optimize(Optimize),
 }
@@ -17,14 +17,14 @@ pub struct Sort {
 }
 
 #[derive(PartialEq, Debug)]
-pub struct Function {
+pub struct Constructor {
     pub name: Name,
     pub args: Vec<Name>,
     pub ret: Name,
 }
 
 #[derive(PartialEq, Debug)]
-pub struct Property {
+pub struct Primitive {
     pub name: Name,
     pub args: Vec<Name>,
     pub ret: Name,
@@ -53,7 +53,6 @@ pub struct Optimize {
 pub enum Term {
     Var(Name),
     IntLit(i64),
-    BoolLit(bool),
     Call(Name, Vec<Term>),
 }
 
@@ -76,8 +75,8 @@ impl std::fmt::Display for Term {
 
 pub struct Program {
     pub sorts: Vec<Sort>,
-    pub funcs: Vec<Function>,
-    pub props: Vec<Property>,
+    pub constructors: Vec<Constructor>,
+    pub primitives: Vec<Primitive>,
     pub rewrites: Vec<Rewrite>,
     pub optimize: Vec<Optimize>,
 }
@@ -86,8 +85,8 @@ impl Program {
     pub fn add_decl(&mut self, decl: Decl) -> Result<()> {
         match decl {
             Decl::Sort(s) => self.sorts.push(s),
-            Decl::Function(f) => self.funcs.push(f),
-            Decl::Property(p) => self.props.push(p),
+            Decl::Constructor(c) => self.constructors.push(c),
+            Decl::Primitive(p) => self.primitives.push(p),
             Decl::Rewrite(mut r) => {
                 match &mut r {
                     Rewrite::Rewrite(re) => {
@@ -109,8 +108,8 @@ impl Program {
     pub fn from_decls(decls: Vec<Decl>) -> Result<Self> {
         let mut prog = Program {
             sorts: vec![],
-            funcs: vec![],
-            props: vec![],
+            constructors: vec![],
+            primitives: vec![],
             rewrites: vec![],
             optimize: vec![],
         };

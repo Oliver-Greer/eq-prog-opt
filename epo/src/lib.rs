@@ -8,7 +8,8 @@ pub type Result<T> = std::result::Result<T, String>;
 pub trait Solver: Sized {
     fn new() -> Self;
     fn declare_sort(&mut self, sort: Sort) -> Result<()>;
-    fn declare_function(&mut self, func: Function) -> Result<()>;
+    fn declare_constructor(&mut self, func: Constructor) -> Result<()>;
+    fn declare_primitive(&mut self, func: Primitive) -> Result<()>;
     fn declare_rewrite(&mut self, rewrite: Rewrite) -> Result<()>;
     fn optimize(&mut self, optimize: Optimize) -> Result<Term>;
     fn benchmark(prog: Program) -> Result<Vec<Term>> {
@@ -17,8 +18,11 @@ pub trait Solver: Sized {
         for sort in prog.sorts {
             solver.declare_sort(sort)?;
         }
-        for func in prog.funcs {
-            solver.declare_function(func)?;
+        for cons in prog.constructors {
+            solver.declare_constructor(cons)?;
+        }
+        for prim in prog.primitives {
+            solver.declare_primitive(prim)?;
         }
         for rewrite in prog.rewrites {
             solver.declare_rewrite(rewrite)?;

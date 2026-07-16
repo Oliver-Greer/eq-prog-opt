@@ -1,11 +1,11 @@
 (sort Math)
 
-(function Num (i64) Math)
-(function Var (String) Math)
-(function Add (Math Math) Math)
-(function Sub (Math Math) Math)
-(function Mul (Math Math) Math)
-(function Div (Math Math) Math)
+(constructor Num (i64) Math)
+(constructor Var (String) Math)
+(constructor Add (Math Math) Math)
+(constructor Sub (Math Math) Math)
+(constructor Mul (Math Math) Math)
+(constructor Div (Math Math) Math)
 
 ;; add comm/assoc
 (rewrite (Add ?a ?b)

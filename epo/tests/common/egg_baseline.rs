@@ -4,8 +4,7 @@
 /// Next step is adding basic numerical costs to AST nodes 
 /// and automatically supporting birewrites
 
-use egg::{Condition, ConditionEqual};
-use ::egg::{AstSize, ConditionalApplier, DidMerge, ENodeOrVar, Extractor, RecExpr};
+use ::egg::{AstSize, DidMerge, ENodeOrVar, Extractor, RecExpr};
 use ::egg::{Id, Pattern, PatternAst, Runner};
 use ::egg::{Symbol, define_language};
 
@@ -16,13 +15,10 @@ use epo::ast::*;
 define_language! {
     pub enum Lang {
         Num(i64),
-        Bool(bool),
         "+" = Add([Id; 2]),
         "-" = Sub([Id; 2]),
         "*" = Mul([Id; 2]),
         "/" = Div([Id; 2]),
-        "=" = Eq([Id; 2]),
-        "!=" = Neq([Id; 2]),
         Call(Symbol, Vec<Id>),
     }
 }
@@ -30,89 +26,31 @@ define_language! {
 type EGraph = ::egg::EGraph<Lang, MyAnalysis>;
 type EggRewrite = ::egg::Rewrite<Lang, MyAnalysis>;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum DataTypes {
-    Bool(bool),
-    I64(i64),
-}
-
-impl std::fmt::Display for DataTypes {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            DataTypes::I64(n) => write!(f, "{}", n),
-            DataTypes::Bool(b) => write!(f, "{}", b),
-        }
-    }
-}
-
 #[derive(Default)]
 struct MyAnalysis;
 impl ::egg::Analysis<Lang> for MyAnalysis {
-    type Data = Option<DataTypes>;
+    type Data = Option<i64>;
 
     fn make(egraph: &mut EGraph, enode: &Lang, _id: Id) -> Self::Data {
         match enode {
-            Lang::Num(n) => Some(DataTypes::I64(*n)),
-            Lang::Bool(b) => Some(DataTypes::Bool(*b)),
+            Lang::Num(n) => Some(*n),
             Lang::Add([a, b]) => {
-                if let (Some(DataTypes::I64(a_val)), Some(DataTypes::I64(b_val))) =
-                    (egraph[*a].data, egraph[*b].data)
-                {
-                    Some(DataTypes::I64(a_val + b_val))
-                } else {
-                    None
-                }
+                let a_val = egraph[*a].data?;
+                let b_val = egraph[*b].data?;
+                Some(a_val + b_val)
             }
             Lang::Sub([a, b]) => {
-                if let (Some(DataTypes::I64(a_val)), Some(DataTypes::I64(b_val))) =
-                    (egraph[*a].data, egraph[*b].data)
-                {
-                    Some(DataTypes::I64(a_val - b_val))
-                } else {
-                    None
-                }
+                let a_val = egraph[*a].data?;
+                let b_val = egraph[*b].data?;
+                Some(a_val - b_val)
             }
             Lang::Mul([a, b]) => {
-                if let (Some(DataTypes::I64(a_val)), Some(DataTypes::I64(b_val))) =
-                    (egraph[*a].data, egraph[*b].data)
-                {
-                    Some(DataTypes::I64(a_val * b_val))
-                } else {
-                    None
-                }
+                let a_val = egraph[*a].data?;
+                let b_val = egraph[*b].data?;
+                Some(a_val * b_val)
             }
-            Lang::Div([a, b]) => {
-                if let (Some(DataTypes::I64(a_val)), Some(DataTypes::I64(b_val))) =
-                    (egraph[*a].data, egraph[*b].data)
-                {
-                    if b_val != 0 {
-                        Some(DataTypes::I64(a_val / b_val))
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                }
-            }
-            Lang::Eq([a, b]) => {
-                if let (Some(DataTypes::I64(a_val)), Some(DataTypes::I64(b_val))) =
-                    (egraph[*a].data, egraph[*b].data)
-                {
-                    Some(DataTypes::Bool(a_val == b_val))
-                } else {
-                    None
-                }
-            }
-            Lang::Neq([a, b]) => {
-                if let (Some(DataTypes::I64(a_val)), Some(DataTypes::I64(b_val))) =
-                    (egraph[*a].data, egraph[*b].data)
-                {
-                    Some(DataTypes::Bool(a_val != b_val))
-                } else {
-                    None
-                }
-            }
-            _ => None,
+            // no const folding for division rn for simplicity
+            _ => None
         }
     }
 
@@ -125,15 +63,7 @@ impl ::egg::Analysis<Lang> for MyAnalysis {
 
     fn modify(egraph: &mut EGraph, id: Id) {
         if let Some(data) = egraph[id].data {
-            let new_id;
-            match data {
-                DataTypes::Bool(b) => {
-                    new_id = egraph.add(Lang::Bool(b));
-                }
-                DataTypes::I64(n) => {
-                    new_id = egraph.add(Lang::Num(n));
-                }
-            }
+            let new_id= egraph.add(Lang::Num(data));
             egraph.union(id, new_id);
         }
     }
@@ -161,13 +91,6 @@ fn term_to_pattern_rec(term: &Term, pat: &mut PatternAst<Lang>) -> Id {
             };
             pat.add(node)
         }
-        Term::BoolLit(b) => {
-            let node = match b {
-                true => Lang::Bool(true),
-                false => Lang::Bool(false),
-            };
-            pat.add(ENodeOrVar::ENode(node))
-        }
         Term::IntLit(n) => pat.add(ENodeOrVar::ENode(Lang::Num(*n))),
         Term::Call(f, terms) => {
             let children: Vec<Id> = terms.iter().map(|t| term_to_pattern_rec(t, pat)).collect();
@@ -176,8 +99,6 @@ fn term_to_pattern_rec(term: &Term, pat: &mut PatternAst<Lang>) -> Id {
                 "-" => Lang::Sub([children[0], children[1]]),
                 "*" => Lang::Mul([children[0], children[1]]),
                 "/" => Lang::Div([children[0], children[1]]),
-                "=" => Lang::Eq([children[0], children[1]]),
-                "!=" => Lang::Neq([children[0], children[1]]),
                 _ => Lang::Call(f.parse().unwrap(), children),
             };
             pat.add(ENodeOrVar::ENode(node))
@@ -188,7 +109,6 @@ fn term_to_pattern_rec(term: &Term, pat: &mut PatternAst<Lang>) -> Id {
 fn recexpr_to_term(expr: &RecExpr<Lang>, id: Id) -> Term {
     match &expr[id] {
         Lang::Num(n) => Term::IntLit(*n),
-        Lang::Bool(b) => Term::BoolLit(*b),
         Lang::Call(f, children) => {
             let terms = children.iter().map(|&c| recexpr_to_term(expr, c)).collect();
             Term::Call(f.to_string(), terms)
@@ -209,14 +129,6 @@ fn recexpr_to_term(expr: &RecExpr<Lang>, id: Id) -> Term {
             let terms = children.iter().map(|&c| recexpr_to_term(expr, c)).collect();
             Term::Call("/".into(), terms)
         }
-        Lang::Eq(children) => {
-            let terms = children.iter().map(|&c| recexpr_to_term(expr, c)).collect();
-            Term::Call("=".into(), terms)
-        }
-        Lang::Neq(children) => {
-            let terms = children.iter().map(|&c| recexpr_to_term(expr, c)).collect();
-            Term::Call("!=".into(), terms)
-        }
     }
 }
 
@@ -229,21 +141,28 @@ impl Solver for EggSolver {
         Ok(())
     }
 
-    fn declare_function(&mut self, _func: Function) -> Result<()> {
+    fn declare_constructor(&mut self, _cons: Constructor) -> Result<()> {
         Ok(())
     }
 
+    fn declare_primitive(&mut self, func: Primitive) -> Result<()> {
+        Ok(())
+    }
+
+    // TODO: handle conditions with new syntax
     fn declare_rewrite(&mut self, rewrite: Rewrite) -> Result<()> {
         match rewrite {
             Rewrite::Rewrite(re) => {
                 let lhs: Pattern<Lang> = term_to_pattern(&re.lhs);
                 let rhs: Pattern<Lang> = term_to_pattern(&re.rhs);
-                //self.rules.push(egg_rw);
+                let egg_rw = EggRewrite::new(&re.name, lhs, rhs)?;
+                self.rules.push(egg_rw);
             },
             Rewrite::BiRewrite(bire) => {
                 let lhs: Pattern<Lang> = term_to_pattern(&bire.lhs);
                 let rhs: Pattern<Lang> = term_to_pattern(&bire.rhs);
-                //self.rules.push(egg_rw);
+                let egg_rw = EggRewrite::new(&bire.name, lhs, rhs)?;
+                self.rules.push(egg_rw);
             }
         }
         Ok(())

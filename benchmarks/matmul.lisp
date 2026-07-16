@@ -1,12 +1,12 @@
 (sort Matrix)
 
 ;; MakeMatrix takes a name and rows and columns
-(function MakeMatrix (String i64 i64) Matrix)
+(constructor MakeMatrix (String i64 i64) Matrix)
 ;; Multiple two Matrices
-(function MatMul (Matrix Matrix) Matrix)
+(constructor MatMul (Matrix Matrix) Matrix)
 ;; Extract rows and columns
-(function Rows (Matrix) i64)
-(function Cols (Matrix) i64)
+(constructor Rows (Matrix) i64)
+(constructor Cols (Matrix) i64)
 
 ;; get rows and columns
 (rewrite GetRows

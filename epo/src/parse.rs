@@ -16,8 +16,6 @@
 //!
 //! StringLiteral   -> '"' [_] '"'
 //!
-//! BoolLiteral     -> 'True' | 'False'
-//!
 //! TermAtom        -> BoolLiteral | IntegerLiteral | StringLiteral | Variable | Identifier
 //!
 //! TermList        -> '(' WhiteSpace Identifier (WhiteSpace Term)* WhiteSpace ')'
@@ -26,7 +24,11 @@
 //!
 //! SortDecl        -> '(' WhiteSpace 'sort' WhiteSpace Identifier WhiteSpace ')'
 //!
-//! FuncDecl        -> '(' WhiteSpace 'function' WhiteSpace Identifier WhiteSpace
+//! Constructor     -> '(' WhiteSpace 'constructor' WhiteSpace Identifier WhiteSpace
+//!                         '(' (WhiteSpace Identifier)* WhiteSpace ')'
+//!                         WhiteSpace Identifier WhiteSpace ')'
+//! 
+//! Primitive       -> '(' WhiteSpace 'primitive' WhiteSpace Identifier WhiteSpace
 //!                         '(' (WhiteSpace Identifier)* WhiteSpace ')'
 //!                         WhiteSpace Identifier WhiteSpace ')'
 //!
@@ -55,9 +57,6 @@ peg::parser! {
         rule identifier() -> String
             = s:$((!(['(' | ')' | ';'] / ws_char()) [_])+) { s.to_string() }
 
-        rule bool_lit() -> bool
-            = b:$("True" / "False")     { b == "True"}
-
         rule int_lit() -> i64
             = n:$("-"? ['0'..='9']+)    {? n.parse().map_err(|_| "invalid integer") }
 
@@ -65,8 +64,7 @@ peg::parser! {
             = "\"" s:$([^'\"']*) "\""   { s.to_string() }
 
         rule term_atom() -> Term
-            = b:bool_lit()              { Term::BoolLit(b) }
-            / n:int_lit()               { Term::IntLit(n) }
+            = n:int_lit()               { Term::IntLit(n) }
             / s:string_lit()            { Term::Var(s) }
             / i:identifier()            { Term::Var(i) }
 
@@ -83,11 +81,18 @@ peg::parser! {
                 Decl::Sort(Sort { name })
             }
 
-        rule function_decl() -> Decl
-            = "(" ws() "function" ws() name:identifier() ws()
+        rule constructor_decl() -> Decl
+            = "(" ws() "constructor" ws() name:identifier() ws()
               "(" args:(ws() a:identifier() { a })* ws() ")" ws()
               ret:identifier() ws() ")" {
-                Decl::Function(Function { name, args, ret })
+                Decl::Constructor(Constructor { name, args, ret })
+            }
+
+        rule primitive_decl() -> Decl
+            = "(" ws() "primitive" ws() name:identifier() ws()
+              "(" args:(ws() a:identifier() { a })* ws() ")" ws()
+              ret:identifier() ws() ")" {
+                Decl::Primitive(Primitive { name, args, ret })
             }
 
         rule rewrite_decl() -> Decl
@@ -183,7 +188,8 @@ peg::parser! {
 
         rule decl() -> Decl
             = sort_decl()
-            / function_decl()
+            / constructor_decl()
+            / primitive_decl()
             / rewrite_decl()
             / birewrite_decl()
             / optimize_decl()
@@ -231,11 +237,25 @@ mod tests {
     }
 
     #[test]
-    fn parse_func() {
+    fn parse_constructor() {
         // intentionally testing whitespace
-        let input: &str = "(function \n MyName (Sort1 \n Sort2  )  Ret)";
+        let input: &str = "(constructor \n MyName (Sort1 \n Sort2  )  Ret)";
         let output: Result<Decl> = parse_decl(input);
-        let expected_output: Decl = Decl::Function(Function {
+        let expected_output: Decl = Decl::Constructor(Constructor {
+            name: "MyName".to_string(),
+            args: vec!["Sort1".to_string(), "Sort2".to_string()],
+            ret: "Ret".to_string()
+        });
+        assert!(output.is_ok());
+        assert!(output.unwrap() == expected_output);
+    }
+
+    #[test]
+    fn parse_primitive() {
+        // intentionally testing whitespace
+        let input: &str = "( primitive \n MyName (Sort1 \n Sort2  )  Ret)";
+        let output: Result<Decl> = parse_decl(input);
+        let expected_output: Decl = Decl::Primitive(Primitive {
             name: "MyName".to_string(),
             args: vec!["Sort1".to_string(), "Sort2".to_string()],
             ret: "Ret".to_string()
@@ -284,7 +304,7 @@ mod tests {
             name: "MyName".to_string(),
             lhs: Term::Var("?a".to_string()),
             rhs: Term::Var("?b".to_string()),
-            cond: Some(Term::BoolLit(true)),
+            cond: Some(Term::Var("True".to_string())),
         }));
         assert!(output.is_ok());
         assert!(output.unwrap() == expected_output);
@@ -299,7 +319,7 @@ mod tests {
             name: String::from(""),
             lhs: Term::Var("?a".to_string()),
             rhs: Term::Var("?b".to_string()),
-            cond: Some(Term::BoolLit(false)),
+            cond: Some(Term::Var("False".to_string())),
         }));
         println!("{:?}", output);
         assert!(output.is_ok());
