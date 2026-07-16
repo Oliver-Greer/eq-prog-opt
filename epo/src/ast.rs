@@ -28,6 +28,7 @@ pub struct Primitive {
     pub name: Name,
     pub args: Vec<Name>,
     pub ret: Name,
+    pub desc: Option<String>
 }
 
 #[derive(PartialEq, Debug)]

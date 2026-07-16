@@ -28,9 +28,11 @@
 //!                         '(' (WhiteSpace Identifier)* WhiteSpace ')'
 //!                         WhiteSpace Identifier WhiteSpace ')'
 //! 
+//! Description     -> WhiteSpace ":desc" WhiteSpace StringLiteral WhiteSpace
+//! 
 //! Primitive       -> '(' WhiteSpace 'primitive' WhiteSpace Identifier WhiteSpace
 //!                         '(' (WhiteSpace Identifier)* WhiteSpace ')'
-//!                         WhiteSpace Identifier WhiteSpace ')'
+//!                         WhiteSpace Identifier (Description | WhiteSpace) ')'
 //!
 //! NOTE: Rewrites can also have names but those are left out here for conciseness
 //! Bi/RewriteDecl  -> '(' WhiteSpace ('rewrite' / 'birewrite')
@@ -88,11 +90,21 @@ peg::parser! {
                 Decl::Constructor(Constructor { name, args, ret })
             }
 
+        rule description() -> String
+            = ws() ":desc" ws() desc:string_lit() ws() {
+                desc
+            }
+
         rule primitive_decl() -> Decl
             = "(" ws() "primitive" ws() name:identifier() ws()
               "(" args:(ws() a:identifier() { a })* ws() ")" ws()
+              ret:identifier() ws() desc:description() ")" {
+                Decl::Primitive(Primitive { name, args, ret, desc: Some(desc) })
+            }
+            / "(" ws() "primitive" ws() name:identifier() ws()
+              "(" args:(ws() a:identifier() { a })* ws() ")" ws()
               ret:identifier() ws() ")" {
-                Decl::Primitive(Primitive { name, args, ret })
+                Decl::Primitive(Primitive { name, args, ret, desc: None })
             }
 
         rule rewrite_decl() -> Decl
@@ -251,14 +263,30 @@ mod tests {
     }
 
     #[test]
-    fn parse_primitive() {
+    fn parse_primitive_no_desc() {
         // intentionally testing whitespace
         let input: &str = "( primitive \n MyName (Sort1 \n Sort2  )  Ret)";
         let output: Result<Decl> = parse_decl(input);
         let expected_output: Decl = Decl::Primitive(Primitive {
             name: "MyName".to_string(),
             args: vec!["Sort1".to_string(), "Sort2".to_string()],
-            ret: "Ret".to_string()
+            ret: "Ret".to_string(),
+            desc: None
+        });
+        assert!(output.is_ok());
+        assert!(output.unwrap() == expected_output);
+    }
+
+    #[test]
+    fn parse_primitive_with_desc() {
+        // intentionally testing whitespace
+        let input: &str = "( primitive \n MyName (Sort1 \n Sort2  )  Ret  :desc \"This is it\" )";
+        let output: Result<Decl> = parse_decl(input);
+        let expected_output: Decl = Decl::Primitive(Primitive {
+            name: "MyName".to_string(),
+            args: vec!["Sort1".to_string(), "Sort2".to_string()],
+            ret: "Ret".to_string(),
+            desc: Some("This is it".to_string())
         });
         assert!(output.is_ok());
         assert!(output.unwrap() == expected_output);
