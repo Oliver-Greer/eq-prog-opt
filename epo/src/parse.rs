@@ -28,16 +28,16 @@
 //!
 //! FuncDecl        -> '(' WhiteSpace 'function' WhiteSpace Identifier WhiteSpace
 //!                         '(' (WhiteSpace Identifier)* WhiteSpace ')'
-//!                         WhiteSpace Identifier (WhiteSpace Identifier WhiteSpace | WhiteSpace) ')'
+//!                         WhiteSpace Identifier WhiteSpace ')'
 //!
 //! NOTE: Rewrites can also have names but those are left out here for conciseness
-//! RewriteDecl     -> '(' WhiteSpace ('rewrite' / 'birewrite')
+//! Bi/RewriteDecl  -> '(' WhiteSpace ('rewrite' / 'birewrite')
 //!                         WhiteSpace Term WhiteSpace Term WhiteSpace ')'
 //!                     | '(' WhiteSpace ('rewrite' / 'birewrite')
 //!                         WhiteSpace Term WhiteSpace Term WhiteSpace
 //!                         ":when" WhiteSpace Term WhiteSpace ')'
 //!
-//! Optimize        -> '(' WhiteSpace 'optimize' WhiteSpace Term WhiteSpace ')'
+//! Optimize        -> '(' WhiteSpace 'optimize' WhiteSpace Term (WhiteSpace  ')'
 
 use crate::*;
 
@@ -211,6 +211,9 @@ pub fn parse_decls(input: &str) -> Result<Vec<Decl>> {
     sexp_parser::parse_decls(input).map_err(|e| e.to_string())
 }
 
+
+/// Parsing unit tests with limited but sufficient coverage.
+/// More edge cases will be handled by integration tests down the pipeline.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -230,7 +233,6 @@ mod tests {
     #[test]
     fn parse_func() {
         // intentionally testing whitespace
-        // no cost
         let input: &str = "(function \n MyName (Sort1 \n Sort2  )  Ret)";
         let output: Result<Decl> = parse_decl(input);
         let expected_output: Decl = Decl::Function(Function {
