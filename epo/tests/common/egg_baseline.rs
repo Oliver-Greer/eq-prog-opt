@@ -145,7 +145,7 @@ impl Solver for EggSolver {
         Ok(())
     }
 
-    fn declare_primitive(&mut self, func: Primitive) -> Result<()> {
+    fn declare_primitive(&mut self, _prim: Primitive) -> Result<()> {
         Ok(())
     }
 

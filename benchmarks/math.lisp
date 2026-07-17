@@ -1,11 +1,27 @@
 (sort Math)
 
+;; Direct implementation required
+(primitive Add (Math Math) Math)
+(primitive Sub (Math Math) Math)
+(primitive Mul (Math Math) Math)
+(primitive Div (Math Math) Math)
+(primitive IsNotZero (Math) Bool
+	:desc "Return True if the input argument != 0, else False.")
+
+(lattice Const 
+	:desc   "Option<i64> for constant folding analysis."
+	:make   "For Add, Sub, or Mul as Op return Some(Op(a, b)). 
+			 For Div reduce a / b to simplest fractional form.
+			 Else return None."
+	:merge  "Assert both constants are identical, otherwise error.")
+
+(analysis GetConst (Math) Const)
+
+
+;; Direct implementation not required
 (constructor Num (i64) Math)
 (constructor Var (String) Math)
-(constructor Add (Math Math) Math)
-(constructor Sub (Math Math) Math)
-(constructor Mul (Math Math) Math)
-(constructor Div (Math Math) Math)
+
 
 ;; add comm/assoc
 (rewrite (Add ?a ?b)
@@ -59,29 +75,16 @@
 ;; div cancel
 (rewrite (Div ?a ?a)
 		 (Num 1)
-		 :when (!= ?a (Num 0)))
+		 :when (IsNotZero ?a))
 
 ;; flip multiplication
 (rewrite (Mul ?a (Div (Num 1) ?a))
 		 (Num 1)
-		 :when (!= ?a (Num 0)))
+		 :when (IsNotZero ?a))
 
-;; folding
-(rewrite (Add (Num ?a) (Num ?b))
-		 (Num (+ ?a ?b)))
-(rewrite (Sub (Num ?a) (Num ?b))
-		 (Num (- ?a ?b)))
-(rewrite (Mul (Num ?a) (Num ?b))
-		 (Num (* ?a ?b)))
-(rewrite (Div (Num ?a) (Num ?b))
-		 (Num (/ ?a ?b)))
-
-(optimize (Add 
-			(Mul (Var "y") (Add (Var "x") (Var "y")))
-			(Sub (Add (Var "x") (Num 2)) (Add (Var "x") (Var "x")))))
-(optimize (Add (Div 
-					(Num 1) 
-					(Sub
-						(Div (Add (Num 0) (Num 2)) (Num 2)) 
-						(Div (Sub (Num 1) (Num 4)) (Num 1))))
-				(Var "x")))
+(optimize (Add (Mul (Var "y") (Add (Var "x") (Var "y")))
+			   (Sub (Add (Var "x") (Num 2)) (Add (Var "x") (Var "x")))))
+(optimize (Add (Div (Num 1) 
+					(Sub (Div (Add (Num 0) (Num 2)) (Num 2)) 
+						 (Div (Sub (Num 1) (Num 4)) (Num 1))))
+			   (Var "x")))

@@ -69,7 +69,6 @@ impl std::fmt::Display for Term {
                 }
                 write!(f, ")")
             }
-            _ => Ok(()),
         }
     }
 }
