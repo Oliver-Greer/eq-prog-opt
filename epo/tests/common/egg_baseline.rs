@@ -149,7 +149,6 @@ impl Solver for EggSolver {
         Ok(())
     }
 
-    // TODO: handle conditions with new syntax
     fn declare_rewrite(&mut self, rewrite: Rewrite) -> Result<()> {
         match rewrite {
             Rewrite::Rewrite(re) => {
@@ -161,8 +160,16 @@ impl Solver for EggSolver {
             Rewrite::BiRewrite(bire) => {
                 let lhs: Pattern<Lang> = term_to_pattern(&bire.lhs);
                 let rhs: Pattern<Lang> = term_to_pattern(&bire.rhs);
-                let egg_rw = EggRewrite::new(&bire.name, lhs, rhs)?;
+                // Since pattern cant be cloned need to create new patterns again
+                // Better way of doing this?
+                let bi_rhs: Pattern<Lang> = term_to_pattern(&bire.lhs);
+                let bi_lhs: Pattern<Lang> = term_to_pattern(&bire.rhs);
+                let egg_rw: egg::Rewrite<Lang, MyAnalysis> = 
+                    EggRewrite::new(&bire.name, lhs, rhs)?;
+                let egg_bi_rw: egg::Rewrite<Lang, MyAnalysis> = 
+                    EggRewrite::new(&bire.name, bi_lhs, bi_rhs)?;
                 self.rules.push(egg_rw);
+                self.rules.push(egg_bi_rw);
             }
         }
         Ok(())
