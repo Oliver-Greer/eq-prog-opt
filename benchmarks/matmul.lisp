@@ -1,32 +1,20 @@
 (sort Matrix)
 
+;; analysis
+(lattice i64)
+(analysis Rows (Matrix) Option<i64>)
+(analysis Cols (Matrix) Option<i64>)
+
 ;; MakeMatrix takes a name and rows and columns
 (constructor MakeMatrix (String i64 i64) Matrix)
 ;; Multiple two Matrices
 (constructor MatMul (Matrix Matrix) Matrix)
-;; Extract rows and columns
-(constructor Rows (Matrix) i64)
-(constructor Cols (Matrix) i64)
-
-;; get rows and columns
-(rewrite GetRows
-    (Rows (MakeMatrix ?name ?r ?c))
-    ?r)
-(rewrite GetCols
-    (Cols (MakeMatrix ?name ?r ?c))
-    ?c)
 
 ;; associativity
-(rewrite Associativity
+(birewrite Associativity
     (MatMul (MatMul ?A ?B) ?C) 
     (MatMul ?A (MatMul ?B ?C)) 
     :when (= (Cols ?B) (Rows ?C)))
-
-;; otherway, will use birewrite later
-(rewrite AssociativityRight
-    (MatMul ?A (MatMul ?B ?C)) 
-    (MatMul (MatMul ?A ?B) ?C)
-    :when (= (Cols ?A) (Rows ?B)))
 
 (optimize 
     (MatMul
