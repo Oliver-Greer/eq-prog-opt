@@ -1,8 +1,7 @@
-/// Simple egg baseline for a selection of benchmarks
-/// Supports both = and != as conditional functions, and +, -, *, and / for constant folding
-/// Code needs significant cleanup and work, but provides a working prototype
-/// Next step is adding basic numerical costs to AST nodes 
-/// and automatically supporting birewrites
+//! Simple egg baseline for the math benchmark
+//! Supports +, -, * for constant folding
+//! Code needs significant cleanup and work, but provides a working prototype
+//! Next step is adding basic numerical costs to AST nodes 
 
 use ::egg::{AstSize, DidMerge, ENodeOrVar, Extractor, RecExpr};
 use ::egg::{Id, Pattern, PatternAst, Runner};
@@ -172,6 +171,10 @@ impl Solver for EggSolver {
                 self.rules.push(egg_bi_rw);
             }
         }
+        Ok(())
+    }
+
+    fn declare_cost(&mut self, costs: CostFunc) -> Result<()> {
         Ok(())
     }
 
