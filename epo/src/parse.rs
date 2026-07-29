@@ -52,6 +52,13 @@
 //!                         WhiteSpace Term WhiteSpace Term WhiteSpace
 //!                         ":when" WhiteSpace Term WhiteSpace ')'
 //!
+//! CostType        -> '"Tree"' | '"Graph"' | StringLiteral
+//! 
+//! NodeCost        -> '(' WhiteSpace Identifier WhiteSpace IntegerLiteral WhiteSpace ')'
+//! 
+//! CostFunc        -> '(' WhiteSpace 'cost-fn' WhiteSpace Identifier WhiteSpace
+//!                     ':type' WhiteSpace CostType WhiteSpace (NodeCost WhiteSpace)* (WhiteSpace | '') ')'
+//! 
 //! Optimize        -> '(' WhiteSpace 'optimize' WhiteSpace Term (WhiteSpace  ')'
 
 use crate::*;
@@ -296,6 +303,37 @@ peg::parser! {
                 )
             }
 
+        rule cost_term() -> Term
+            = "(" ws() name:identifier() ws() i:int_lit() ws() ")" {
+                Term::Call(
+                    name,
+                    vec![Term::IntLit(i)]
+                )
+            }
+
+        rule node_costs() -> Vec<Term>
+            = ws() items:(t:cost_term() ws() {t})* { items }
+
+        rule cost_decl() -> Decl
+            = "(" ws() "cost-fn" ws() name:identifier() ws() ":type" ws() "Tree"
+                ws() costs:node_costs() ws() ")" {
+                    Decl::CostFunc(
+                        CostFunc { name, func_type: CostFuncType::Tree, costs: Some(costs) }
+                    )
+            }
+            / "(" ws() "cost-fn" ws() name:identifier() ws() ":type" ws() "Graph"
+                ws() costs:node_costs() ws() ")" {
+                    Decl::CostFunc(
+                        CostFunc { name, func_type: CostFuncType::Graph, costs: Some(costs) }
+                    )
+            }
+            / "(" ws() "cost-fn" ws() name:identifier() ws() ":type" ws() desc:string_lit()
+                ws() ")" {
+                    Decl::CostFunc(
+                        CostFunc { name, func_type: CostFuncType::Custom(desc), costs: None }
+                    )
+            }
+
         rule optimize_decl() -> Decl
             = "(" ws() "optimize" ws() term:term() ws() ")" {
                 Decl::Optimize(Optimize { term })
@@ -309,6 +347,7 @@ peg::parser! {
             / analysis_decl()
             / rewrite_decl()
             / birewrite_decl()
+            / cost_decl()
             / optimize_decl()
 
         pub rule parse_term() -> Term
@@ -515,6 +554,68 @@ mod tests {
             rhs: Term::Var("?b".to_string()),
             cond: Some(Term::Var("False".to_string())),
         }));
+        println!("{:?}", output);
+        assert!(output.is_ok());
+        assert!(output.unwrap() == expected_output);
+    }
+
+    #[test]
+    fn parse_tree_cost() {
+        let input: &str = "( cost-fn \n MyName :type Tree (Add 1) (Sub 1) (Der 10))";
+        let output: Result<Decl> = parse_decl(input);
+        let expected_output: Decl = Decl::CostFunc(CostFunc { 
+            name: "MyName".to_string(), 
+            func_type: CostFuncType::Tree, 
+            costs: Some(vec![Term::Call(
+                "Add".to_string(), 
+                vec![Term::IntLit(1)]),
+                Term::Call(
+                "Sub".to_string(), 
+                vec![Term::IntLit(1)]),
+                Term::Call(
+                "Der".to_string(), 
+                vec![Term::IntLit(10)])]) 
+        });
+        println!("{:?}", output);
+        assert!(output.is_ok());
+        assert!(output.unwrap() == expected_output);
+    }
+
+    #[test]
+    fn parse_graph_cost() {
+        let input: &str = "( cost-fn \n MyName :type Graph 
+            (Add 1) 
+            (Sub 1) 
+            (Der 10))";
+        let output: Result<Decl> = parse_decl(input);
+        let expected_output: Decl = Decl::CostFunc(CostFunc { 
+            name: "MyName".to_string(), 
+            func_type: CostFuncType::Graph, 
+            costs: Some(vec![Term::Call(
+                "Add".to_string(), 
+                vec![Term::IntLit(1)]),
+                Term::Call(
+                "Sub".to_string(), 
+                vec![Term::IntLit(1)]),
+                Term::Call(
+                "Der".to_string(), 
+                vec![Term::IntLit(10)])]) 
+        });
+        println!("{:?}", output);
+        assert!(output.is_ok());
+        assert!(output.unwrap() == expected_output);
+    }
+
+    #[test]
+    fn parse_custom_cost() {
+        // Testing whether I can start a custom string with Graph
+        let input: &str = "( cost-fn \n MyName :type \"Graph MyCustomGraphCost\"\t)";
+        let output: Result<Decl> = parse_decl(input);
+        let expected_output: Decl = Decl::CostFunc(CostFunc { 
+            name: "MyName".to_string(), 
+            func_type: CostFuncType::Custom("Graph MyCustomGraphCost".to_string()), 
+            costs: None 
+        });
         println!("{:?}", output);
         assert!(output.is_ok());
         assert!(output.unwrap() == expected_output);

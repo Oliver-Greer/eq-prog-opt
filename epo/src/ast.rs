@@ -1,6 +1,21 @@
+//! AST Representation for a benchmark file
+//! 
+//! The base node is a Term which can be a variable, an integer, or a call expression.
+//! All other nodes are various kinds of declaration.
+//! 
+//! This would benefit from more granular typing.
+//! For example a CostFunc should not take a vector of Terms,
+//! but rather a vector of (TermName Int) which is much more specific.
+//! This creates ambiguity for the person implementing it.
+//! 
+//! We should also offer type checking the AST to make writing benchmarks easier.
+//! For example, names used in the cost function term list should 
+//! be declared previously as nodes.
+
 use crate::Result;
 
 type Name = String;
+type CostDesc = String;
 
 #[derive(PartialEq, Debug)]
 pub enum Decl {
@@ -10,6 +25,7 @@ pub enum Decl {
     Lattice(Lattice),
     Analysis(Analysis),
     Rewrite(Rewrite),
+    CostFunc(CostFunc),
     Optimize(Optimize),
 }
 
@@ -64,6 +80,21 @@ pub struct RewriteVariant {
 }
 
 #[derive(PartialEq, Debug)]
+pub enum CostFuncType {
+    Tree,
+    Graph,
+    Custom(CostDesc),
+}
+
+#[derive(PartialEq, Debug)]
+pub struct CostFunc {
+    pub name: Name,
+    pub func_type: CostFuncType,
+    pub costs: Option<Vec<Term>>,
+}
+
+
+#[derive(PartialEq, Debug)]
 pub struct Optimize {
     pub term: Term,
 }
@@ -98,6 +129,7 @@ pub struct Program {
     pub lattices: Vec<Lattice>,
     pub analysis: Vec<Analysis>,
     pub rewrites: Vec<Rewrite>,
+    pub costfuncs: Vec<CostFunc>,
     pub optimize: Vec<Optimize>,
 }
 
@@ -121,7 +153,8 @@ impl Program {
                     }
                 };
                 self.rewrites.push(r)
-            }
+            },
+            Decl::CostFunc(c) => self.costfuncs.push(c),
             Decl::Optimize(o) => self.optimize.push(o),
         }
         Ok(())
@@ -135,6 +168,7 @@ impl Program {
             lattices: vec![],
             analysis: vec![],
             rewrites: vec![],
+            costfuncs: vec![],
             optimize: vec![],
         };
         for decl in decls {

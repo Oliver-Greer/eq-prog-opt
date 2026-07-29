@@ -11,6 +11,7 @@ pub trait Solver: Sized {
     fn declare_constructor(&mut self, func: Constructor) -> Result<()>;
     fn declare_primitive(&mut self, func: Primitive) -> Result<()>;
     fn declare_rewrite(&mut self, rewrite: Rewrite) -> Result<()>;
+    fn declare_cost(&mut self, costs: CostFunc) -> Result<()>;
     fn optimize(&mut self, optimize: Optimize) -> Result<Term>;
     fn benchmark(prog: Program) -> Result<Vec<Term>> {
         let mut solver = Self::new();
@@ -26,6 +27,9 @@ pub trait Solver: Sized {
         }
         for rewrite in prog.rewrites {
             solver.declare_rewrite(rewrite)?;
+        }
+        for cost in prog.costfuncs {
+            solver.declare_cost(cost)?;
         }
 
         let mut results: Vec<Term> = Vec::new();
