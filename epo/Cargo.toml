@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 #parser = { path = "../parser" }
 peg = "0.8"
+inventory = "0.3"
 
 [dev-dependencies]
 egg = "0.11.0"

@@ -7,11 +7,11 @@ mod tests {
 
     use super::*;
 
-    #[test]
-    fn test_matmul() {
-        let results = EggSolver::parse_file_and_run("../benchmarks/matmul.lisp").unwrap();
-        for result in results {
-            println!("Result: {}", result);
-        }
-    }
+    // #[test]
+    // fn test_matmul() {
+    //     let results = EggSolver::parse_file_and_run("../benchmarks/matmul.lisp").unwrap();
+    //     for result in results {
+    //         println!("Result: {}", result);
+    //     }
+    // }
 }

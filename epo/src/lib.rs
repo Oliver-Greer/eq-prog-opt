@@ -1,5 +1,6 @@
 pub mod ast;
 pub mod parse;
+pub mod problem_context;
 
 use ast::*;
 
@@ -9,7 +10,8 @@ pub trait Solver: Sized {
     fn new() -> Self;
     fn declare_sort(&mut self, sort: Sort) -> Result<()>;
     fn declare_constructor(&mut self, func: Constructor) -> Result<()>;
-    fn declare_primitive(&mut self, func: Primitive) -> Result<()>;
+    fn declare_analysis(&mut self, analysis: AnalysisMap) -> Result<()>;
+    fn declare_primitive(&mut self, primitive: PrimitiveMap) -> Result<()>;
     fn declare_rewrite(&mut self, rewrite: Rewrite) -> Result<()>;
     fn declare_cost(&mut self, costs: CostFunc) -> Result<()>;
     fn optimize(&mut self, optimize: Optimize) -> Result<Term>;
@@ -22,9 +24,10 @@ pub trait Solver: Sized {
         for cons in prog.constructors {
             solver.declare_constructor(cons)?;
         }
-        for prim in prog.primitives {
-            solver.declare_primitive(prim)?;
-        }
+
+        solver.declare_analysis(prog.analysis_impl)?;
+        solver.declare_primitive(prog.primitive_impl)?;
+
         for rewrite in prog.rewrites {
             solver.declare_rewrite(rewrite)?;
         }

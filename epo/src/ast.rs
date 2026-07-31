@@ -1,29 +1,34 @@
 //! AST Representation for a benchmark file
-//! 
+//!
 //! The base node is a Term which can be a variable, an integer, or a call expression.
 //! All other nodes are various kinds of declaration.
-//! 
+//!
 //! This would benefit from more granular typing.
 //! For example a CostFunc should not take a vector of Terms,
 //! but rather a vector of (TermName Int) which is much more specific.
 //! This creates ambiguity for the person implementing it.
-//! 
+//!
 //! We should also offer type checking the AST to make writing benchmarks easier.
-//! For example, names used in the cost function term list should 
+//! For example, names used in the cost function term list should
 //! be declared previously as nodes.
 
-use crate::Result;
+use std::collections::HashMap;
+
+use crate::{
+    Result,
+    problem_context::{Analysis, ErasedFn, Primitive},
+};
 
 type Name = String;
 type CostDesc = String;
+pub type AnalysisMap = HashMap<String, &'static [ErasedFn]>;
+pub type PrimitiveMap = HashMap<String, &'static ErasedFn>;
 
 #[derive(PartialEq, Debug)]
 pub enum Decl {
     Sort(Sort),
+    ImplementationFile(String),
     Constructor(Constructor),
-    Primitive(Primitive),
-    Lattice(Lattice),
-    Analysis(Analysis),
     Rewrite(Rewrite),
     CostFunc(CostFunc),
     Optimize(Optimize),
@@ -42,30 +47,6 @@ pub struct Constructor {
 }
 
 #[derive(PartialEq, Debug)]
-pub struct Primitive {
-    pub name: Name,
-    pub args: Vec<Name>,
-    pub ret: Name,
-    pub desc: Option<String>
-}
-
-#[derive(PartialEq, Debug)]
-pub struct Lattice {
-    pub name: Name,
-    pub desc: Option<String>,
-    pub make: Option<String>,
-    pub merge: Option<String>,
-}
-
-#[derive(PartialEq, Debug)]
-pub struct Analysis {
-    pub name: Name,
-    pub args: Vec<Name>,
-    pub ret: Name,
-    pub desc: Option<String>
-}
-
-#[derive(PartialEq, Debug)]
 pub enum Rewrite {
     Rewrite(RewriteVariant),
     BiRewrite(RewriteVariant),
@@ -76,7 +57,7 @@ pub struct RewriteVariant {
     pub name: Name,
     pub lhs: Term,
     pub rhs: Term,
-    pub cond: Option<Term>
+    pub cond: Option<Term>,
 }
 
 #[derive(PartialEq, Debug)]
@@ -92,7 +73,6 @@ pub struct CostFunc {
     pub func_type: CostFuncType,
     pub costs: Option<Vec<Term>>,
 }
-
 
 #[derive(PartialEq, Debug)]
 pub struct Optimize {
@@ -124,56 +104,81 @@ impl std::fmt::Display for Term {
 
 pub struct Program {
     pub sorts: Vec<Sort>,
+    pub implementation_file: String,
     pub constructors: Vec<Constructor>,
-    pub primitives: Vec<Primitive>,
-    pub lattices: Vec<Lattice>,
-    pub analysis: Vec<Analysis>,
+    pub analysis_impl: AnalysisMap,
+    pub primitive_impl: PrimitiveMap,
     pub rewrites: Vec<Rewrite>,
     pub costfuncs: Vec<CostFunc>,
     pub optimize: Vec<Optimize>,
 }
 
 impl Program {
-    pub fn add_decl(&mut self, decl: Decl) -> Result<()> {
+    fn add_decl(&mut self, decl: Decl) -> Result<()> {
         match decl {
             Decl::Sort(s) => self.sorts.push(s),
+            Decl::ImplementationFile(s) => self.implementation_file = s,
             Decl::Constructor(c) => self.constructors.push(c),
-            Decl::Primitive(p) => self.primitives.push(p),
-            Decl::Lattice(l) => self.lattices.push(l),
-            Decl::Analysis(a) => self.analysis.push(a),
             Decl::Rewrite(mut r) => {
                 match &mut r {
                     Rewrite::Rewrite(re) => {
                         // unique-ify rewrite names by appending the current number of rewrites
                         re.name = format!("{}.{}", re.name, self.rewrites.len());
-                    },
+                    }
                     Rewrite::BiRewrite(bire) => {
                         // unique-ify rewrite names by appending the current number of rewrites
                         bire.name = format!("{}.{}", bire.name, self.rewrites.len());
                     }
                 };
                 self.rewrites.push(r)
-            },
+            }
             Decl::CostFunc(c) => self.costfuncs.push(c),
             Decl::Optimize(o) => self.optimize.push(o),
         }
         Ok(())
     }
 
-    pub fn from_decls(decls: Vec<Decl>) -> Result<Self> {
+    fn add_analysis(&mut self, analysis: &Analysis) -> Result<()> {
+        self.analysis_impl
+            .insert(String::from(analysis.term_name), analysis.analysis);
+        Ok(())
+    }
+
+    fn add_primitive(&mut self, primitive: &Primitive) -> Result<()> {
+        self.primitive_impl
+            .insert(String::from(primitive.func_name), primitive.primitive);
+        Ok(())
+    }
+
+    fn from_decls(decls: Vec<Decl>) -> Result<Self> {
         let mut prog = Program {
             sorts: vec![],
+            implementation_file: String::new(),
             constructors: vec![],
-            primitives: vec![],
-            lattices: vec![],
-            analysis: vec![],
+            analysis_impl: HashMap::new(),
+            primitive_impl: HashMap::new(),
             rewrites: vec![],
             costfuncs: vec![],
             optimize: vec![],
         };
+
         for decl in decls {
             prog.add_decl(decl)?;
         }
+
+        for analysis in inventory::iter::<Analysis> {
+            println!("{:?}", analysis.benchmark_name);
+            if analysis.benchmark_name == prog.implementation_file {
+                prog.add_analysis(analysis)?;
+            }
+        }
+
+        for primitive in inventory::iter::<Primitive> {
+            if primitive.benchmark_name == prog.implementation_file {
+                prog.add_primitive(primitive)?;
+            }
+        }
+
         Ok(prog)
     }
 

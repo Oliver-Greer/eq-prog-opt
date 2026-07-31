@@ -27,23 +27,9 @@
 //! Constructor     -> '(' WhiteSpace 'constructor' WhiteSpace Identifier WhiteSpace
 //!                         '(' (WhiteSpace Identifier)* WhiteSpace ')'
 //!                         WhiteSpace Identifier WhiteSpace ')'
-//! 
-//! Description     -> WhiteSpace ":desc" WhiteSpace StringLiteral WhiteSpace
-//! 
-//! Make            -> WhiteSpace ":make" WhiteSpace StringLiteral WhiteSpace
-//! 
-//! Merge           -> WhiteSpace ":merge" WhiteSpace StringLiteral WhiteSpace
-//! 
-//! Lattice         -> '(' WhiteSpace 'lattice' WhiteSpace Identifier (Description | WhiteSpace)
-//!                         (Make | WhiteSpace) (Merge | WhiteSpace) ')'
-//! 
-//! Analysis        -> '(' WhiteSpace 'analysis' WhiteSpace Identifier WhiteSpace
-//!                         '(' (WhiteSpace Identifier)* WhiteSpace ')'
-//!                         WhiteSpace Identifier (Description | WhiteSpace) ')'
-//! 
-//! Primitive       -> '(' WhiteSpace 'primitive' WhiteSpace Identifier WhiteSpace
-//!                         '(' (WhiteSpace Identifier)* WhiteSpace ')'
-//!                         WhiteSpace Identifier (Description | WhiteSpace) ')'
+//!
+//! Implementation        -> '(' WhiteSpace 'implementation-file' StringLit WhiteSpace ')'
+//!
 //!
 //! NOTE: Rewrites can also have names but those are left out here for conciseness
 //! Bi/RewriteDecl  -> '(' WhiteSpace ('rewrite' / 'birewrite')
@@ -53,12 +39,12 @@
 //!                         ":when" WhiteSpace Term WhiteSpace ')'
 //!
 //! CostType        -> '"Tree"' | '"Graph"' | StringLiteral
-//! 
+//!
 //! NodeCost        -> '(' WhiteSpace Identifier WhiteSpace IntegerLiteral WhiteSpace ')'
-//! 
+//!
 //! CostFunc        -> '(' WhiteSpace 'cost-fn' WhiteSpace Identifier WhiteSpace
 //!                     ':type' WhiteSpace CostType WhiteSpace (NodeCost WhiteSpace)* (WhiteSpace | '') ')'
-//! 
+//!
 //! Optimize        -> '(' WhiteSpace 'optimize' WhiteSpace Term (WhiteSpace  ')'
 
 use crate::*;
@@ -108,113 +94,9 @@ peg::parser! {
                 Decl::Constructor(Constructor { name, args, ret })
             }
 
-        rule make() -> String
-            = ws() ":make" ws() make:string_lit() ws() {
-                make
-            }
-
-        rule merge() -> String
-            = ws() ":merge" ws() merge:string_lit() ws() {
-                merge
-            }
-
-        rule description() -> String
-            = ws() ":desc" ws() desc:string_lit() ws() {
-                desc
-            }
-
-        rule lattice_decl() -> Decl
-            = "(" ws() "lattice" ws() name:identifier() ws() ")" {
-                Decl::Lattice(Lattice { 
-                    name, 
-                    desc: None, 
-                    make: None, 
-                    merge: None,  
-                })
-            }
-            / "(" ws() "lattice" ws() name:identifier() ws() desc:description() ws() ")" {
-                Decl::Lattice(Lattice { 
-                    name, 
-                    desc: Some(desc), 
-                    make: None, 
-                    merge: None, 
-                })
-            }
-            / "(" ws() "lattice" ws() name:identifier() ws() make:make() ws() ")" {
-                Decl::Lattice(Lattice { 
-                    name, 
-                    desc: None, 
-                    make: Some(make), 
-                    merge: None, 
-                })
-            }
-            / "(" ws() "lattice" ws() name:identifier() ws() merge:merge() ws() ")" {
-                Decl::Lattice(Lattice { 
-                    name, 
-                    desc: None, 
-                    make: None, 
-                    merge: Some(merge), 
-                })
-            }
-            / "(" ws() "lattice" ws() name:identifier() ws() desc:description() ws()
-                make:make() ws() ")" {
-                    Decl::Lattice(Lattice { 
-                        name, 
-                        desc: Some(desc), 
-                        make: Some(make), 
-                        merge: None
-                    })
-            }
-            / "(" ws() "lattice" ws() name:identifier() ws() desc:description() ws()
-                merge:merge() ws() ")" {
-                    Decl::Lattice(Lattice { 
-                        name, 
-                        desc: Some(desc), 
-                        make: None, 
-                        merge: Some(merge)
-                    })
-            }
-            / "(" ws() "lattice" ws() name:identifier() ws() make:make() ws()
-                merge:merge() ws() ")" {
-                    Decl::Lattice(Lattice { 
-                        name, 
-                        desc: None, 
-                        make: Some(make), 
-                        merge: Some(merge)
-                    })
-            }
-            / "(" ws() "lattice" ws() name:identifier() ws() desc:description() ws()
-                make:make() ws() merge:merge() ws() ")" {
-                Decl::Lattice(Lattice { 
-                    name, 
-                    desc: Some(desc), 
-                    make: Some(make), 
-                    merge: Some(merge),
-                })
-            }
-
-        rule analysis_decl() -> Decl
-            = "(" ws() "analysis" ws() name:identifier() ws()
-              "(" args:(ws() a:identifier() { a })* ws() ")" ws()
-              ret:identifier() ws() desc:description() ")" {
-                Decl::Analysis(Analysis { name, args, ret, desc: Some(desc) })
-            }
-            / "(" ws() "analysis" ws() name:identifier() ws()
-              "(" args:(ws() a:identifier() { a })* ws() ")" ws()
-              ret:identifier() ws() ")" {
-                Decl::Analysis(Analysis { name, args, ret, desc: None })
-            }
-
-        rule primitive_decl() -> Decl
-            = "(" ws() "primitive" ws() name:identifier() ws()
-              "(" args:(ws() a:identifier() { a })* ws() ")" ws()
-              ret:identifier() ws() desc:description() ")" {
-                Decl::Primitive(Primitive { name, args, ret, desc: Some(desc) })
-            }
-            / "(" ws() "primitive" ws() name:identifier() ws()
-              "(" args:(ws() a:identifier() { a })* ws() ")" ws()
-              ret:identifier() ws() ")" {
-                Decl::Primitive(Primitive { name, args, ret, desc: None })
+        rule implementation_decl() -> Decl
+            = "(" ws() "impl" ws() file_name:string_lit() ws() ")" {
+                Decl::ImplementationFile(file_name)
             }
 
         rule rewrite_decl() -> Decl
@@ -341,10 +223,8 @@ peg::parser! {
 
         rule decl() -> Decl
             = sort_decl()
+            / implementation_decl()
             / constructor_decl()
-            / primitive_decl()
-            / lattice_decl()
-            / analysis_decl()
             / rewrite_decl()
             / birewrite_decl()
             / cost_decl()
@@ -373,7 +253,6 @@ pub fn parse_decls(input: &str) -> Result<Vec<Decl>> {
     sexp_parser::parse_decls(input).map_err(|e| e.to_string())
 }
 
-
 /// Parsing unit tests with limited but sufficient coverage.
 /// More edge cases will be handled by integration tests down the pipeline.
 #[cfg(test)]
@@ -400,99 +279,17 @@ mod tests {
         let expected_output: Decl = Decl::Constructor(Constructor {
             name: "MyName".to_string(),
             args: vec!["Sort1".to_string(), "Sort2".to_string()],
-            ret: "Ret".to_string()
-        });
-        assert!(output.is_ok());
-        assert!(output.unwrap() == expected_output);
-    }
-
-    #[test]
-    fn parse_primitive_no_desc() {
-        // intentionally testing whitespace
-        let input: &str = "( primitive \n MyName (Sort1 \n Sort2  )  Ret)";
-        let output: Result<Decl> = parse_decl(input);
-        let expected_output: Decl = Decl::Primitive(Primitive {
-            name: "MyName".to_string(),
-            args: vec!["Sort1".to_string(), "Sort2".to_string()],
             ret: "Ret".to_string(),
-            desc: None
         });
         assert!(output.is_ok());
         assert!(output.unwrap() == expected_output);
     }
 
     #[test]
-    fn parse_primitive_with_desc() {
-        // intentionally testing whitespace
-        let input: &str = "( primitive \n MyName (Sort1 \n Sort2  )  Ret  :desc \"This is it\" )";
+    fn parse_implementation() {
+        let input: &str = "( impl \t\t\n \"math.rs\")";
         let output: Result<Decl> = parse_decl(input);
-        let expected_output: Decl = Decl::Primitive(Primitive {
-            name: "MyName".to_string(),
-            args: vec!["Sort1".to_string(), "Sort2".to_string()],
-            ret: "Ret".to_string(),
-            desc: Some("This is it".to_string())
-        });
-        assert!(output.is_ok());
-        assert!(output.unwrap() == expected_output);
-    }
-
-    #[test]
-    fn parse_lattice_no_desc() {
-        // intentionally testing whitespace
-        let input: &str = "( lattice \n MyName )";
-        let output: Result<Decl> = parse_decl(input);
-        let expected_output: Decl = Decl::Lattice( Lattice {
-            name: "MyName".to_string(),
-            desc: None,
-            make: None,
-            merge: None
-        });
-        assert!(output.is_ok());
-        assert!(output.unwrap() == expected_output);
-    }
-
-    #[test]
-    fn parse_lattice_with_desc() {
-        // intentionally testing whitespace
-        let input: &str = "( lattice \n MyName :desc \"description\" )";
-        let output: Result<Decl> = parse_decl(input);
-        let expected_output: Decl = Decl::Lattice( Lattice {
-            name: "MyName".to_string(),
-            desc: Some("description".to_string()),
-            make: None,
-            merge: None
-        });
-        assert!(output.is_ok());
-        assert!(output.unwrap() == expected_output);
-    }
-
-    #[test]
-    fn parse_lattice_with_desc_and_make() {
-        // intentionally testing whitespace
-        let input: &str = "( lattice \n MyName :desc \"description\" \n :make \t \"make\")";
-        let output: Result<Decl> = parse_decl(input);
-        let expected_output: Decl = Decl::Lattice( Lattice {
-            name: "MyName".to_string(),
-            desc: Some("description".to_string()),
-            make: Some("make".to_string()),
-            merge: None
-        });
-        assert!(output.is_ok());
-        assert!(output.unwrap() == expected_output);
-    }
-
-    #[test]
-    fn parse_lattice_with_desc_and_make_plus_merge() {
-        // intentionally testing whitespace
-        let input: &str = "( lattice \n MyName :desc \"description\" \n :make \t \"make\"
-        \t\t :merge \t \"merge\"\t )";
-        let output: Result<Decl> = parse_decl(input);
-        let expected_output: Decl = Decl::Lattice( Lattice {
-            name: "MyName".to_string(),
-            desc: Some("description".to_string()),
-            make: Some("make".to_string()),
-            merge: Some("merge".to_string()),
-        });
+        let expected_output: Decl = Decl::ImplementationFile("math.rs".to_string());
         assert!(output.is_ok());
         assert!(output.unwrap() == expected_output);
     }
@@ -503,7 +300,7 @@ mod tests {
         // one way rewrite with name
         let input: &str = "(rewrite \n MyName ?a \t ?b)";
         let output: Result<Decl> = parse_decl(input);
-        let expected_output: Decl = Decl::Rewrite(Rewrite::Rewrite(RewriteVariant{
+        let expected_output: Decl = Decl::Rewrite(Rewrite::Rewrite(RewriteVariant {
             name: "MyName".to_string(),
             lhs: Term::Var("?a".to_string()),
             rhs: Term::Var("?b".to_string()),
@@ -518,7 +315,7 @@ mod tests {
         // two way rewrite with name
         let input: &str = "(birewrite \n MyName ?a \t ?b)";
         let output: Result<Decl> = parse_decl(input);
-        let expected_output: Decl = Decl::Rewrite(Rewrite::BiRewrite( RewriteVariant {
+        let expected_output: Decl = Decl::Rewrite(Rewrite::BiRewrite(RewriteVariant {
             name: "MyName".to_string(),
             lhs: Term::Var("?a".to_string()),
             rhs: Term::Var("?b".to_string()),
@@ -533,7 +330,7 @@ mod tests {
         // one way rewrite with name and cond
         let input: &str = "(rewrite \n MyName ?a \t ?b :when True)";
         let output: Result<Decl> = parse_decl(input);
-        let expected_output: Decl = Decl::Rewrite(Rewrite::Rewrite( RewriteVariant {
+        let expected_output: Decl = Decl::Rewrite(Rewrite::Rewrite(RewriteVariant {
             name: "MyName".to_string(),
             lhs: Term::Var("?a".to_string()),
             rhs: Term::Var("?b".to_string()),
@@ -554,7 +351,6 @@ mod tests {
             rhs: Term::Var("?b".to_string()),
             cond: Some(Term::Var("False".to_string())),
         }));
-        println!("{:?}", output);
         assert!(output.is_ok());
         assert!(output.unwrap() == expected_output);
     }
@@ -563,20 +359,15 @@ mod tests {
     fn parse_tree_cost() {
         let input: &str = "( cost-fn \n MyName :type Tree (Add 1) (Sub 1) (Der 10))";
         let output: Result<Decl> = parse_decl(input);
-        let expected_output: Decl = Decl::CostFunc(CostFunc { 
-            name: "MyName".to_string(), 
-            func_type: CostFuncType::Tree, 
-            costs: Some(vec![Term::Call(
-                "Add".to_string(), 
-                vec![Term::IntLit(1)]),
-                Term::Call(
-                "Sub".to_string(), 
-                vec![Term::IntLit(1)]),
-                Term::Call(
-                "Der".to_string(), 
-                vec![Term::IntLit(10)])]) 
+        let expected_output: Decl = Decl::CostFunc(CostFunc {
+            name: "MyName".to_string(),
+            func_type: CostFuncType::Tree,
+            costs: Some(vec![
+                Term::Call("Add".to_string(), vec![Term::IntLit(1)]),
+                Term::Call("Sub".to_string(), vec![Term::IntLit(1)]),
+                Term::Call("Der".to_string(), vec![Term::IntLit(10)]),
+            ]),
         });
-        println!("{:?}", output);
         assert!(output.is_ok());
         assert!(output.unwrap() == expected_output);
     }
@@ -588,20 +379,15 @@ mod tests {
             (Sub 1) 
             (Der 10))";
         let output: Result<Decl> = parse_decl(input);
-        let expected_output: Decl = Decl::CostFunc(CostFunc { 
-            name: "MyName".to_string(), 
-            func_type: CostFuncType::Graph, 
-            costs: Some(vec![Term::Call(
-                "Add".to_string(), 
-                vec![Term::IntLit(1)]),
-                Term::Call(
-                "Sub".to_string(), 
-                vec![Term::IntLit(1)]),
-                Term::Call(
-                "Der".to_string(), 
-                vec![Term::IntLit(10)])]) 
+        let expected_output: Decl = Decl::CostFunc(CostFunc {
+            name: "MyName".to_string(),
+            func_type: CostFuncType::Graph,
+            costs: Some(vec![
+                Term::Call("Add".to_string(), vec![Term::IntLit(1)]),
+                Term::Call("Sub".to_string(), vec![Term::IntLit(1)]),
+                Term::Call("Der".to_string(), vec![Term::IntLit(10)]),
+            ]),
         });
-        println!("{:?}", output);
         assert!(output.is_ok());
         assert!(output.unwrap() == expected_output);
     }
@@ -611,12 +397,11 @@ mod tests {
         // Testing whether I can start a custom string with Graph
         let input: &str = "( cost-fn \n MyName :type \"Graph MyCustomGraphCost\"\t)";
         let output: Result<Decl> = parse_decl(input);
-        let expected_output: Decl = Decl::CostFunc(CostFunc { 
-            name: "MyName".to_string(), 
-            func_type: CostFuncType::Custom("Graph MyCustomGraphCost".to_string()), 
-            costs: None 
+        let expected_output: Decl = Decl::CostFunc(CostFunc {
+            name: "MyName".to_string(),
+            func_type: CostFuncType::Custom("Graph MyCustomGraphCost".to_string()),
+            costs: None,
         });
-        println!("{:?}", output);
         assert!(output.is_ok());
         assert!(output.unwrap() == expected_output);
     }

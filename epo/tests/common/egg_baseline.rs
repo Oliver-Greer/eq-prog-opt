@@ -1,7 +1,7 @@
 //! Simple egg baseline for the math benchmark
 //! Supports +, -, * for constant folding
 //! Code needs significant cleanup and work, but provides a working prototype
-//! Next step is adding basic numerical costs to AST nodes 
+//! Next step is adding basic numerical costs to AST nodes
 
 use ::egg::{AstSize, DidMerge, ENodeOrVar, Extractor, RecExpr};
 use ::egg::{Id, Pattern, PatternAst, Runner};
@@ -31,6 +31,24 @@ impl ::egg::Analysis<Lang> for MyAnalysis {
     type Data = Option<i64>;
 
     fn make(egraph: &mut EGraph, enode: &Lang, _id: Id) -> Self::Data {
+        // if everything is just a call
+        // match enode.symbol and lookup in dict
+        // then call function pointer with children
+        // this means every analysis takes a vector of data points
+        // even if it we already know how many it should take
+        // this isnt performant... :(
+        // ex:
+        /*
+           if dict.contains_key(enode.0) {
+               let vec = Vec::new()
+               for child in enode.1 {
+                   vec.pushback(egraph[*child].data?)
+               }
+               return Some(dict[enode.0](vec))
+           } else {
+               return None
+           }
+        */
         match enode {
             Lang::Num(n) => Some(*n),
             Lang::Add([a, b]) => {
@@ -49,7 +67,7 @@ impl ::egg::Analysis<Lang> for MyAnalysis {
                 Some(a_val * b_val)
             }
             // no const folding for division rn for simplicity
-            _ => None
+            _ => None,
         }
     }
 
@@ -62,7 +80,7 @@ impl ::egg::Analysis<Lang> for MyAnalysis {
 
     fn modify(egraph: &mut EGraph, id: Id) {
         if let Some(data) = egraph[id].data {
-            let new_id= egraph.add(Lang::Num(data));
+            let new_id = egraph.add(Lang::Num(data));
             egraph.union(id, new_id);
         }
     }
@@ -144,7 +162,11 @@ impl Solver for EggSolver {
         Ok(())
     }
 
-    fn declare_primitive(&mut self, _prim: Primitive) -> Result<()> {
+    fn declare_analysis(&mut self, _analysis: AnalysisMap) -> Result<()> {
+        Ok(())
+    }
+
+    fn declare_primitive(&mut self, _primitive: PrimitiveMap) -> Result<()> {
         Ok(())
     }
 
@@ -153,9 +175,9 @@ impl Solver for EggSolver {
             Rewrite::Rewrite(re) => {
                 let lhs: Pattern<Lang> = term_to_pattern(&re.lhs);
                 let rhs: Pattern<Lang> = term_to_pattern(&re.rhs);
-                let egg_rw = EggRewrite::new(&re.name, lhs, rhs)?;
+                let egg_rw: egg::Rewrite<Lang, MyAnalysis> = EggRewrite::new(&re.name, lhs, rhs)?;
                 self.rules.push(egg_rw);
-            },
+            }
             Rewrite::BiRewrite(bire) => {
                 let lhs: Pattern<Lang> = term_to_pattern(&bire.lhs);
                 let rhs: Pattern<Lang> = term_to_pattern(&bire.rhs);
@@ -163,9 +185,8 @@ impl Solver for EggSolver {
                 // Better way of doing this?
                 let bi_rhs: Pattern<Lang> = term_to_pattern(&bire.lhs);
                 let bi_lhs: Pattern<Lang> = term_to_pattern(&bire.rhs);
-                let egg_rw: egg::Rewrite<Lang, MyAnalysis> = 
-                    EggRewrite::new(&bire.name, lhs, rhs)?;
-                let egg_bi_rw: egg::Rewrite<Lang, MyAnalysis> = 
+                let egg_rw: egg::Rewrite<Lang, MyAnalysis> = EggRewrite::new(&bire.name, lhs, rhs)?;
+                let egg_bi_rw: egg::Rewrite<Lang, MyAnalysis> =
                     EggRewrite::new(&bire.name, bi_lhs, bi_rhs)?;
                 self.rules.push(egg_rw);
                 self.rules.push(egg_bi_rw);
@@ -174,7 +195,7 @@ impl Solver for EggSolver {
         Ok(())
     }
 
-    fn declare_cost(&mut self, costs: CostFunc) -> Result<()> {
+    fn declare_cost(&mut self, _costs: CostFunc) -> Result<()> {
         Ok(())
     }
 
