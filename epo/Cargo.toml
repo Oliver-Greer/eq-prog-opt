@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-#parser = { path = "../parser" }
+macros = { path = "../macros" }
+benchmarks = { path = "../benchmarks" }
 peg = "0.8"
 inventory = "0.3"
 

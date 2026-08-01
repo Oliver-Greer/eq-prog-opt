@@ -1,12 +1,11 @@
 pub mod ast;
 pub mod parse;
-pub mod problem_context;
 
 use std::collections::HashMap;
 
 use ast::*;
 
-use crate::problem_context::ErasedFn;
+use macros::problem_context::ErasedFn;
 
 pub type Result<T> = std::result::Result<T, String>;
 
@@ -16,7 +15,7 @@ pub trait AnalysisApi {
 
 #[derive(Default, Clone)]
 pub struct AnalysisMap {
-    pub map: HashMap<String, &'static [ErasedFn]>,
+    map: HashMap<String, &'static [ErasedFn]>,
 }
 
 pub struct PrimitiveMap {

@@ -18,8 +18,8 @@ checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
 name = "benchmarks"
 version = "0.1.0"
 dependencies = [
- "epo",
  "inventory",
+ "macros",
 ]
 
 [[package]]
@@ -79,8 +79,10 @@ dependencies = [
 name = "epo"
 version = "0.1.0"
 dependencies = [
+ "benchmarks",
  "egg",
  "inventory",
+ "macros",
  "peg",
 ]
 
@@ -178,6 +180,13 @@ name = "log"
 version = "0.4.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0ceec5bc11778974d1bcb055b18002eba7f4b3518b6a0081b3af5f21666da9ad"
+
+[[package]]
+name = "macros"
+version = "0.1.0"
+dependencies = [
+ "inventory",
+]
 
 [[package]]
 name = "num-bigint"

@@ -19,6 +19,16 @@ pub struct Primitive {
 inventory::collect!(Analysis);
 inventory::collect!(Primitive);
 
+/// Hacky macro that creates a dummy function to
+/// ensure dead code elim doesnt strip away 
+/// the inventory submit
+#[macro_export]
+macro_rules! link {
+    () => {
+        pub fn dummy() {}
+    };
+}
+
 #[macro_export]
 macro_rules! register_analysis {
     ($term:expr, 1, $func_name:ident) => {
@@ -35,10 +45,10 @@ macro_rules! register_analysis {
             fn wrapper(args: &[&dyn std::any::Any]) -> Box<dyn std::any::Any> {
                 infer($func_name as fn(&_) -> _, args)
             }
-            static FN_PTR: epo::problem_context::ErasedFn = wrapper;
+            static FN_PTR: macros::problem_context::ErasedFn = wrapper;
 
-            inventory::submit!(epo::problem_context::Analysis {
-                benchmark_name: file!(),
+            inventory::submit!(macros::problem_context::Analysis {
+                benchmark_name: std::file!(),
                 term_name: $term,
                 analysis: &[FN_PTR]
             });
@@ -59,9 +69,9 @@ macro_rules! register_analysis {
             fn wrapper(args: &[&dyn std::any::Any]) -> Box<dyn std::any::Any> {
                 infer($func_name as fn(&_, &_) -> _, args)
             }
-            static FN_PTR: epo::problem_context::ErasedFn = wrapper;
+            static FN_PTR: macros::problem_context::ErasedFn = wrapper;
 
-            inventory::submit!(epo::problem_context::Analysis {
+            inventory::submit!(macros::problem_context::Analysis {
                 benchmark_name: file!(),
                 term_name: $term,
                 analysis: &[FN_PTR]
@@ -86,10 +96,10 @@ macro_rules! register_primitive {
             fn wrapper(args: &[&dyn std::any::Any]) -> Box<dyn std::any::Any> {
                 infer($func_name as fn(&_) -> _, args)
             }
-            static FN_PTR: epo::problem_context::ErasedFn = wrapper;
+            static FN_PTR: macros::problem_context::ErasedFn = wrapper;
 
-            inventory::submit!(epo::problem_context::Primitive {
-                benchmark_name: file!(),
+            inventory::submit!(macros::problem_context::Primitive {
+                benchmark_name: std::file!(),
                 func_name: stringify!($func_name),
                 primitive: &FN_PTR,
             });
@@ -110,10 +120,10 @@ macro_rules! register_primitive {
             fn wrapper(args: &[&dyn std::any::Any]) -> Box<dyn std::any::Any> {
                 infer($func_name as fn(&_, &_) -> _, args)
             }
-            static FN_PTR: epo::problem_context::ErasedFn = wrapper;
+            static FN_PTR: macros::problem_context::ErasedFn = wrapper;
 
-            inventory::submit!(epo::problem_context::Primitive {
-                benchmark_name: file!(),
+            inventory::submit!(macros::problem_context::Primitive {
+                benchmark_name: std::file!(),
                 func_name: stringify!($func_name),
                 primitive: &FN_PTR,
             });

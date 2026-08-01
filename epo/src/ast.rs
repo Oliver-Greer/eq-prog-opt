@@ -14,10 +14,9 @@
 
 use std::collections::HashMap;
 
-use crate::{
-    AnalysisMap, PrimitiveMap, Result,
-    problem_context::{Analysis, Primitive},
-};
+use crate::{AnalysisMap, PrimitiveMap, Result};
+use macros::problem_context::{Analysis, Primitive};
+use benchmarks::math;
 
 type Name = String;
 type CostDesc = String;
@@ -170,8 +169,12 @@ impl Program {
             prog.add_decl(decl)?;
         }
 
+        // Hack to ensure the benchmarks crate doesnt get trimmed.
+        // Definitely need to solve this later because users will add more benchmark files
+        // Maybe move away from inventory and write my own plugin registry
+        math::dummy();
+
         for analysis in inventory::iter::<Analysis> {
-            println!("{:?}", analysis.benchmark_name);
             if analysis.benchmark_name == prog.implementation_file {
                 prog.add_analysis(analysis)?;
             }
