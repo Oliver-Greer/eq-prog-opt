@@ -36,9 +36,19 @@ macro_rules! register_analysis {
                 f: fn(&A, &B) -> R,
                 args: &[&dyn std::any::Any],
             ) -> Option<Box<dyn std::any::Any>> {
-                let a: Option<&A> = if args.len() > 0 {args[0].downcast_ref::<A>()} else {None};
-                let b: Option<&B> = if args.len() > 1 {args[1].downcast_ref::<B>()} else {None};
-                if let Some(first) = a && let Some(second) = b {
+                let a: Option<&A> = if args.len() > 0 {
+                    args[0].downcast_ref::<A>()
+                } else {
+                    None
+                };
+                let b: Option<&B> = if args.len() > 1 {
+                    args[1].downcast_ref::<B>()
+                } else {
+                    None
+                };
+                if let Some(first) = a
+                    && let Some(second) = b
+                {
                     Some(Box::new(f(first, second)) as Box<dyn std::any::Any>)
                 } else {
                     None
@@ -63,7 +73,11 @@ macro_rules! register_analysis {
                 f: fn(&A) -> R,
                 args: &[&dyn std::any::Any],
             ) -> Option<Box<dyn std::any::Any>> {
-                let a: Option<&A> = if args.len() == 1 {args[0].downcast_ref::<A>()} else {None};
+                let a: Option<&A> = if args.len() == 1 {
+                    args[0].downcast_ref::<A>()
+                } else {
+                    None
+                };
                 if let Some(first) = a {
                     Some(Box::new(f(first)) as Box<dyn std::any::Any>)
                 } else {
@@ -93,9 +107,13 @@ macro_rules! register_primitive {
                 f: fn(&A) -> R,
                 args: &[&dyn std::any::Any],
             ) -> Option<Box<dyn std::any::Any>> {
-                let a = if args.len() == 1 {args[0].downcast_ref::<A>()} else {None};
+                let a = if args.len() == 1 {
+                    args[0].downcast_ref::<A>()
+                } else {
+                    None
+                };
 
-                if let Some(first) = a{
+                if let Some(first) = a {
                     Some(Box::new(f(first)) as Box<dyn std::any::Any>)
                 } else {
                     None

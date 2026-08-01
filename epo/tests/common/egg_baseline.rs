@@ -1,17 +1,13 @@
-//! Simple egg baseline for the math benchmark
-//! Supports +, -, * for constant folding
-//! Code needs significant cleanup and work, but provides a working prototype
-//! Next step is adding basic numerical costs to AST nodes
+//! Simple egg baseline for running dynamic benchmarks
 
+// Need this to 
 #![allow(dead_code)]
 
 use std::any::Any;
-use std::ops::ControlFlow::Continue;
 
 use ::egg::{AstSize, DidMerge, ENodeOrVar, Extractor, RecExpr};
 use ::egg::{Id, Pattern, PatternAst, Runner};
 use ::egg::{Symbol, define_language};
-use egg::Language;
 
 use epo::Solver;
 use epo::ast::*;
@@ -37,9 +33,7 @@ impl ::egg::Analysis<Lang> for MyAnalysis {
 
     fn make(egraph: &mut EGraph, enode: &Lang, _id: Id) -> Self::Data {
         match enode {
-            Lang::Num(n) => {
-                Some(Box::new(n.clone()))
-            },
+            Lang::Num(n) => Some(Box::new(n.clone())),
             Lang::Call(name, ids) => {
                 let args: Vec<&dyn Any> = ids
                     .iter()
@@ -131,9 +125,6 @@ impl Solver for EggSolver {
 
     fn declare_analysis(&mut self, analysis_map: AnalysisMap) -> Result<()> {
         self.analysis = analysis_map;
-        // let data: Vec<i64> = vec![1, 2];
-        // let args: Vec<&dyn Any> = data.iter().map(|x| x as &dyn Any).collect();
-        // println!("{:?}", self.analysis.evaluate_node("Add", &args));
         Ok(())
     }
 

@@ -15,8 +15,8 @@
 use std::collections::HashMap;
 
 use crate::{AnalysisMap, PrimitiveMap, Result};
-use macros::problem_context::{Analysis, Primitive};
 use benchmarks::math;
+use macros::problem_context::{Analysis, Primitive};
 
 type Name = String;
 type CostDesc = String;
