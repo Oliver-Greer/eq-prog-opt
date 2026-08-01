@@ -2,6 +2,7 @@ pub mod ast;
 pub mod parse;
 
 use std::collections::HashMap;
+use std::any::Any;
 
 use ast::*;
 
@@ -16,6 +17,16 @@ pub trait AnalysisApi {
 #[derive(Default, Clone)]
 pub struct AnalysisMap {
     map: HashMap<String, &'static [ErasedFn]>,
+}
+
+impl AnalysisMap {
+    pub fn evaluate_node(&self, name: &str, args: &[& dyn Any]) -> Option<Box<dyn Any>> {
+        if let Some(funcs) = self.map.get(name) {
+            funcs[0](&args)
+        } else {
+            None
+        }
+    }
 }
 
 pub struct PrimitiveMap {

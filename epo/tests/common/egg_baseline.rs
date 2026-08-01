@@ -33,18 +33,20 @@ struct MyAnalysis {
 }
 
 impl ::egg::Analysis<Lang> for MyAnalysis {
-    type Data = Option<i64>;
+    type Data = Option<Box<dyn Any>>;
 
     fn make(egraph: &mut EGraph, enode: &Lang, _id: Id) -> Self::Data {
         match enode {
-            Lang::Num(n) => Some(*n),
+            Lang::Num(n) => {
+                Some(Box::new(n.clone()))
+            },
             Lang::Call(name, ids) => {
                 let args: Vec<&dyn Any> = ids
                     .iter()
                     .filter_map(|id| egraph[*id].data.as_ref())
-                    .map(|c| c as &dyn Any)
+                    .map(|c| &**c as &dyn Any)
                     .collect();
-                
+                egraph.analysis.map.evaluate_node(&name.to_string(), &args)
             }
         }
     }
@@ -58,8 +60,14 @@ impl ::egg::Analysis<Lang> for MyAnalysis {
 
     fn modify(egraph: &mut EGraph, id: Id) {
         if let Some(data) = &egraph[id].data {
-            let new_id = egraph.add(Lang::Num(*data));
-            egraph.union(id, new_id);
+            let new_data = data.downcast_ref::<i64>();
+            match new_data {
+                Some(data) => {
+                    let new_id = egraph.add(Lang::Num(*data));
+                    egraph.union(id, new_id);
+                }
+                None => {}
+            }
         }
     }
 }
@@ -123,10 +131,9 @@ impl Solver for EggSolver {
 
     fn declare_analysis(&mut self, analysis_map: AnalysisMap) -> Result<()> {
         self.analysis = analysis_map;
-        let func = self.analysis.map.get("Add").unwrap()[0];
-        let data: Vec<i64> = vec![1, 2];
-        let args: Vec<&dyn Any> = data.iter().map(|x| x as &dyn Any).collect();
-        println!("{:?}", func(&args).downcast_ref::<i64>().unwrap());
+        // let data: Vec<i64> = vec![1, 2];
+        // let args: Vec<&dyn Any> = data.iter().map(|x| x as &dyn Any).collect();
+        // println!("{:?}", self.analysis.evaluate_node("Add", &args));
         Ok(())
     }
 
