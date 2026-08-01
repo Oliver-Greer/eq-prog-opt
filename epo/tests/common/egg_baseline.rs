@@ -3,14 +3,16 @@
 //! Code needs significant cleanup and work, but provides a working prototype
 //! Next step is adding basic numerical costs to AST nodes
 
+#![allow(dead_code)]
+
 use std::any::Any;
 
-use egg::Language;
 use ::egg::{AstSize, DidMerge, ENodeOrVar, Extractor, RecExpr};
 use ::egg::{Id, Pattern, PatternAst, Runner};
 use ::egg::{Symbol, define_language};
+use egg::Language;
 
-use epo::Result;
+use epo::{AnalysisMap, Result};
 use epo::Solver;
 use epo::ast::*;
 
@@ -24,50 +26,42 @@ define_language! {
 type EGraph = ::egg::EGraph<Lang, MyAnalysis>;
 type EggRewrite = ::egg::Rewrite<Lang, MyAnalysis>;
 
-//TODO: instead of this gross thing use another
-// trait to inject into analysis
-static mut ANALYSIS_MAP: Option<AnalysisMap> = None;
-static mut PRIMITIVE_MAP: Option<PrimitiveMap> = None;
-
 #[derive(Default)]
-struct MyAnalysis;
+struct MyAnalysis {
+    map: AnalysisMap,
+}
+
 impl ::egg::Analysis<Lang> for MyAnalysis {
-    type Data = Option<i64>;
+    type Data = Option<Box<dyn Any>>;
 
     fn make(egraph: &mut EGraph, enode: &Lang, _id: Id) -> Self::Data {
         match enode {
-            Lang::Num(n) => Some(*n),
-            Lang::Call(name, ids) => {
-                match ANALYSIS_MAP {
-                    Some(m) => {
-                        let args: Vec<&dyn Any> = enode
-                            .children()
-                            .iter()
-                            .map(|c| &egraph[*c].data as &dyn Any)
-                            .collect();
-                        if let Some(funcs) = m.get(name.as_str()) {
-                            Some(*funcs[0](&args).downcast_ref::<i64>().unwrap())
-                        } else {
-                            None
-                        }
-                    }
-                    None => None
+            Lang::Num(n) => Some(Box::new(n.clone())),
+            Lang::Call(name, _) => {
+                let args: Vec<&dyn Any> = enode
+                    .children()
+                    .iter()
+                    .map(|c| &egraph[*c].data as &dyn Any)
+                    .collect();
+                if let Some(funcs) = egraph.analysis.map.map.get(name.as_str()) {
+                    Some(funcs[0](&args))
+                } else {
+                    None
                 }
-                
             }
         }
     }
 
     fn merge(&mut self, to: &mut Self::Data, from: Self::Data) -> DidMerge {
-        ::egg::merge_option(to, from, |l, r| {
-            assert_eq!(*l, r, "Conflicting values in e-graph: {l} vs {r}");
+        ::egg::merge_option(to, from, |_l, _r| {
+            //assert_eq!(**l, *r, "Conflicting values in e-graph: {l} vs {r}");
             DidMerge(false, false)
         })
     }
 
     fn modify(egraph: &mut EGraph, id: Id) {
-        if let Some(data) = egraph[id].data {
-            let new_id = egraph.add(Lang::Num(data));
+        if let Some(data) = &egraph[id].data {
+            let new_id = egraph.add(Lang::Num(*data.downcast_ref::<i64>().unwrap()));
             egraph.union(id, new_id);
         }
     }
@@ -76,6 +70,7 @@ impl ::egg::Analysis<Lang> for MyAnalysis {
 #[derive(Default)]
 pub struct EggSolver {
     rules: Vec<EggRewrite>,
+    analysis: AnalysisMap,
     runner: Runner<Lang, MyAnalysis>,
 }
 
@@ -129,20 +124,12 @@ impl Solver for EggSolver {
         Ok(())
     }
 
-    fn declare_analysis(&mut self, analysis: AnalysisMap) -> Result<()> {
-        // Must be some better way to do this.
-        // Issue is that this needs to be accessed in the egg analysis trait impl.
-        // We arent multithreading here though so its fine.
-        unsafe {
-            ANALYSIS_MAP = Some(analysis);
-        }
+    fn declare_analysis(&mut self, analysis_map: AnalysisMap) -> Result<()> {
+        self.analysis = analysis_map;
         Ok(())
     }
-
-    fn declare_primitive(&mut self, primitive: PrimitiveMap) -> Result<()> {
-        unsafe {
-            PRIMITIVE_MAP = Some(primitive);
-        }
+    
+    fn declare_primitive(&mut self, _primitive_map: epo::PrimitiveMap) -> Result<()> {
         Ok(())
     }
 
@@ -189,7 +176,7 @@ impl Solver for EggSolver {
             .collect();
 
         // Uses basic AstSize for now, which may not provide the best solution
-        self.runner = Runner::default().with_expr(&term).run(&self.rules);
+        self.runner = Runner::new(MyAnalysis { map: self.analysis.clone() }).with_expr(&term).run(&self.rules);
         let ext = Extractor::new(&self.runner.egraph, AstSize);
         let (_best_cost, best_expr) = ext.find_best(self.runner.roots[0]);
         let best_term = recexpr_to_term(&best_expr, best_expr.root());

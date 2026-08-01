@@ -15,14 +15,12 @@
 use std::collections::HashMap;
 
 use crate::{
-    Result,
-    problem_context::{Analysis, ErasedFn, Primitive},
+    AnalysisMap, PrimitiveMap, Result,
+    problem_context::{Analysis, Primitive},
 };
 
 type Name = String;
 type CostDesc = String;
-pub type AnalysisMap = HashMap<String, &'static [ErasedFn]>;
-pub type PrimitiveMap = HashMap<String, &'static ErasedFn>;
 
 #[derive(PartialEq, Debug)]
 pub enum Decl {
@@ -105,9 +103,9 @@ impl std::fmt::Display for Term {
 pub struct Program {
     pub sorts: Vec<Sort>,
     pub implementation_file: String,
-    pub constructors: Vec<Constructor>,
     pub analysis_impl: AnalysisMap,
     pub primitive_impl: PrimitiveMap,
+    pub constructors: Vec<Constructor>,
     pub rewrites: Vec<Rewrite>,
     pub costfuncs: Vec<CostFunc>,
     pub optimize: Vec<Optimize>,
@@ -140,12 +138,14 @@ impl Program {
 
     fn add_analysis(&mut self, analysis: &Analysis) -> Result<()> {
         self.analysis_impl
+            .map
             .insert(String::from(analysis.term_name), analysis.analysis);
         Ok(())
     }
 
     fn add_primitive(&mut self, primitive: &Primitive) -> Result<()> {
         self.primitive_impl
+            .map
             .insert(String::from(primitive.func_name), primitive.primitive);
         Ok(())
     }
@@ -154,9 +154,13 @@ impl Program {
         let mut prog = Program {
             sorts: vec![],
             implementation_file: String::new(),
+            analysis_impl: AnalysisMap {
+                map: HashMap::new(),
+            },
+            primitive_impl: PrimitiveMap {
+                map: HashMap::new(),
+            },
             constructors: vec![],
-            analysis_impl: HashMap::new(),
-            primitive_impl: HashMap::new(),
             rewrites: vec![],
             costfuncs: vec![],
             optimize: vec![],

@@ -2,16 +2,33 @@ pub mod ast;
 pub mod parse;
 pub mod problem_context;
 
+use std::collections::HashMap;
+
 use ast::*;
 
+use crate::problem_context::ErasedFn;
+
 pub type Result<T> = std::result::Result<T, String>;
+
+pub trait AnalysisApi {
+    fn get_analysis(&self) -> &HashMap<String, &'static [ErasedFn]>;
+}
+
+#[derive(Default, Clone)]
+pub struct AnalysisMap {
+    pub map: HashMap<String, &'static [ErasedFn]>,
+}
+
+pub struct PrimitiveMap {
+    pub map: HashMap<String, &'static ErasedFn>,
+}
 
 pub trait Solver: Sized {
     fn new() -> Self;
     fn declare_sort(&mut self, sort: Sort) -> Result<()>;
     fn declare_constructor(&mut self, func: Constructor) -> Result<()>;
-    fn declare_analysis(&mut self, analysis: AnalysisMap) -> Result<()>;
-    fn declare_primitive(&mut self, primitive: PrimitiveMap) -> Result<()>;
+    fn declare_analysis(&mut self, analysis_map: AnalysisMap) -> Result<()>;
+    fn declare_primitive(&mut self, primitive_map: PrimitiveMap) -> Result<()>;
     fn declare_rewrite(&mut self, rewrite: Rewrite) -> Result<()>;
     fn declare_cost(&mut self, costs: CostFunc) -> Result<()>;
     fn optimize(&mut self, optimize: Optimize) -> Result<Term>;
@@ -24,10 +41,8 @@ pub trait Solver: Sized {
         for cons in prog.constructors {
             solver.declare_constructor(cons)?;
         }
-
         solver.declare_analysis(prog.analysis_impl)?;
         solver.declare_primitive(prog.primitive_impl)?;
-
         for rewrite in prog.rewrites {
             solver.declare_rewrite(rewrite)?;
         }
