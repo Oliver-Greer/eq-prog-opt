@@ -10,6 +10,10 @@ pub mod macros;
 
 use std::any::Any;
 
+// We restrict integers to i64, otherwise users could use
+// i32 and downcasts would fail. Better to make it universal.
+pub type IntType = i64;
+
 /// ErasedFn is a type erased dynamic function pointer.
 /// Returns Option because analysis are defined on partial order lattices.
 pub type ErasedFn = fn(&[&dyn Any]) -> Option<Box<dyn Any>>;

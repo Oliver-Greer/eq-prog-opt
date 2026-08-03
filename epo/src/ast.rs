@@ -16,15 +16,15 @@ use std::collections::HashMap;
 
 use crate::{AnalysisBridge, PrimitiveBridge, Result};
 use benchmarks::math;
-use problem_ctx::{Analysis, Primitive};
+use problem_ctx::{Analysis, IntType, Primitive};
 
 type Name = String;
 type CostDesc = String;
 
 #[derive(PartialEq, Debug)]
 pub enum Decl {
-    Sort(Sort),
     ImplementationFile(String),
+    Sort(Sort),
     Constructor(Constructor),
     Rewrite(Rewrite),
     CostFunc(CostFunc),
@@ -79,7 +79,7 @@ pub struct Optimize {
 #[derive(PartialEq, Debug)]
 pub enum Term {
     Var(Name),
-    IntLit(i64),
+    IntLit(IntType),
     Call(Name, Vec<Term>),
 }
 

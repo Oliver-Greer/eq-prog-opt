@@ -11,10 +11,11 @@ use ::egg::{Symbol, define_language};
 
 use epo::ast::*;
 use epo::{AnalysisBridge, PrimitiveBridge, Result, Solver};
+use problem_ctx::IntType;
 
 define_language! {
     pub enum Lang {
-        Num(i64),
+        Num(IntType),
         Call(Symbol, Vec<Id>),
     }
 }
@@ -53,7 +54,7 @@ impl ::egg::Analysis<Lang> for MyAnalysis {
 
     fn modify(egraph: &mut EGraph, id: Id) {
         if let Some(data) = &egraph[id].data {
-            let new_data = data.downcast_ref::<i64>();
+            let new_data = data.downcast_ref::<IntType>();
             match new_data {
                 Some(data) => {
                     let new_id = egraph.add(Lang::Num(*data));
@@ -114,20 +115,20 @@ impl Solver for EggSolver {
         Default::default()
     }
 
-    fn declare_sort(&mut self, _sort: Sort) -> Result<()> {
-        Ok(())
-    }
-
-    fn declare_constructor(&mut self, _cons: Constructor) -> Result<()> {
-        Ok(())
-    }
-
     fn declare_analysis(&mut self, analysis_map: AnalysisBridge) -> Result<()> {
         self.analysis = analysis_map;
         Ok(())
     }
 
-    fn declare_primitive(&mut self, _primitive_map: PrimitiveBridge) -> Result<()> {
+    fn declare_primitives(&mut self, _primitive_map: PrimitiveBridge) -> Result<()> {
+        Ok(())
+    }
+
+    fn declare_sort(&mut self, _sort: Sort) -> Result<()> {
+        Ok(())
+    }
+
+    fn declare_constructor(&mut self, _cons: Constructor) -> Result<()> {
         Ok(())
     }
 
