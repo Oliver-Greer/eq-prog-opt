@@ -6,39 +6,47 @@ use std::collections::HashMap;
 
 use ast::*;
 
-use macros::problem_context::ErasedFn;
+use problem_ctx::ErasedFn;
 
 pub type Result<T> = std::result::Result<T, String>;
-
-pub trait AnalysisApi {
-    fn get_analysis(&self) -> &HashMap<String, &'static [ErasedFn]>;
-}
+pub type AnalysisMap = HashMap<String, &'static [ErasedFn]>;
+pub type PrimitiveMap = HashMap<String, &'static ErasedFn>;
 
 #[derive(Default, Clone)]
-pub struct AnalysisMap {
-    map: HashMap<String, &'static [ErasedFn]>,
+pub struct AnalysisBridge {
+    map: AnalysisMap,
 }
 
-impl AnalysisMap {
-    pub fn evaluate_node(&self, name: &str, args: &[&dyn Any]) -> Option<Box<dyn Any>> {
-        if let Some(funcs) = self.map.get(name) {
-            funcs[0](&args)
+impl AnalysisBridge {
+    pub fn evaluate_term(&self, name: &str, args: &[&dyn Any]) -> Option<Box<dyn Any>> {
+        if let Some(functions) = self.map.get(name) {
+            functions[0](&args)
         } else {
             None
         }
     }
 }
 
-pub struct PrimitiveMap {
-    pub map: HashMap<String, &'static ErasedFn>,
+pub struct PrimitiveBridge {
+    map: PrimitiveMap,
+}
+
+impl PrimitiveBridge {
+    pub fn evaluate_primitive(&self, name: &str, args: &[&dyn Any]) -> Option<Box<dyn Any>> {
+        if let Some(function) = self.map.get(name) {
+            function(&args)
+        } else {
+            None
+        }
+    }
 }
 
 pub trait Solver: Sized {
     fn new() -> Self;
     fn declare_sort(&mut self, sort: Sort) -> Result<()>;
     fn declare_constructor(&mut self, func: Constructor) -> Result<()>;
-    fn declare_analysis(&mut self, analysis_map: AnalysisMap) -> Result<()>;
-    fn declare_primitive(&mut self, primitive_map: PrimitiveMap) -> Result<()>;
+    fn declare_analysis(&mut self, analysis_map: AnalysisBridge) -> Result<()>;
+    fn declare_primitive(&mut self, primitive_map: PrimitiveBridge) -> Result<()>;
     fn declare_rewrite(&mut self, rewrite: Rewrite) -> Result<()>;
     fn declare_cost(&mut self, costs: CostFunc) -> Result<()>;
     fn optimize(&mut self, optimize: Optimize) -> Result<Term>;
@@ -51,8 +59,8 @@ pub trait Solver: Sized {
         for cons in prog.constructors {
             solver.declare_constructor(cons)?;
         }
-        solver.declare_analysis(prog.analysis_impl)?;
-        solver.declare_primitive(prog.primitive_impl)?;
+        solver.declare_analysis(prog.analysis_bridge)?;
+        solver.declare_primitive(prog.primitive_bridge)?;
         for rewrite in prog.rewrites {
             solver.declare_rewrite(rewrite)?;
         }

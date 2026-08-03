@@ -1,4 +1,4 @@
-use macros::{link, register_analysis, register_primitive};
+use problem_ctx::{link, register_analysis, register_primitive};
 
 fn fold_add(a: &i64, b: &i64) -> i64 {
     a + b

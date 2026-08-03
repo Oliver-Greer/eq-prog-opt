@@ -19,7 +19,7 @@ name = "benchmarks"
 version = "0.1.0"
 dependencies = [
  "inventory",
- "macros",
+ "problem_ctx",
 ]
 
 [[package]]
@@ -82,8 +82,8 @@ dependencies = [
  "benchmarks",
  "egg",
  "inventory",
- "macros",
  "peg",
+ "problem_ctx",
 ]
 
 [[package]]
@@ -182,13 +182,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0ceec5bc11778974d1bcb055b18002eba7f4b3518b6a0081b3af5f21666da9ad"
 
 [[package]]
-name = "macros"
-version = "0.1.0"
-dependencies = [
- "inventory",
-]
-
-[[package]]
 name = "num-bigint"
 version = "0.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -254,6 +247,13 @@ name = "pin-project-lite"
 version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
+
+[[package]]
+name = "problem_ctx"
+version = "0.1.0"
+dependencies = [
+ "inventory",
+]
 
 [[package]]
 name = "proc-macro2"

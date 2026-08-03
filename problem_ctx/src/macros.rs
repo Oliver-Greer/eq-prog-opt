@@ -1,26 +1,10 @@
 //! This file provides helper macros that allow
-//! benchmarks to automatically link problem context.
-
-use std::any::Any;
-
-pub type ErasedFn = fn(&[&dyn Any]) -> Option<Box<dyn Any>>;
-pub struct Analysis {
-    pub benchmark_name: &'static str,
-    pub term_name: &'static str,
-    pub analysis: &'static [ErasedFn],
-}
-
-pub struct Primitive {
-    pub benchmark_name: &'static str,
-    pub func_name: &'static str,
-    pub primitive: &'static ErasedFn,
-}
-
-inventory::collect!(Analysis);
-inventory::collect!(Primitive);
+//! benchmarks to automatically define and link problem context to the solver.
 
 /// Hacky macro that creates a dummy function to
-/// ensure dead code elim doesnt strip away the inventory submit
+/// ensure dead code elim doesn't strip away the inventory submit.
+/// This is unsustainable and the main reason to move away from inventory
+/// and towards a registry struct. It requires a dummy call in epo for each impl file.
 #[macro_export]
 macro_rules! link {
     () => {
@@ -28,6 +12,13 @@ macro_rules! link {
     };
 }
 
+/// Macro to register an analysis implementation with the solver.
+/// It wraps the given function with a dynamic wrapper and uses
+/// the compiler to infer the generic types.
+/// Then it creates a isolated static Fn pointer and submits it to the inventory.
+/// Right now this does not support multiple functions per term (it creates a len 1 slice).
+/// Keeping everything static and using inventory is also a limiting factor,
+/// as we cannot do string/path manip in this block. This should be a proc_macro.
 #[macro_export]
 macro_rules! register_analysis {
     ($term:expr, 2, $func_name:ident) => {
@@ -58,9 +49,9 @@ macro_rules! register_analysis {
             fn wrapper(args: &[&dyn std::any::Any]) -> Option<Box<dyn std::any::Any>> {
                 infer($func_name as fn(&_, &_) -> _, args)
             }
-            static FN_PTR: macros::problem_context::ErasedFn = wrapper;
+            static FN_PTR: problem_ctx::ErasedFn = wrapper;
 
-            inventory::submit!(macros::problem_context::Analysis {
+            inventory::submit!(problem_ctx::Analysis {
                 benchmark_name: file!(),
                 term_name: $term,
                 analysis: &[FN_PTR]
@@ -88,9 +79,9 @@ macro_rules! register_analysis {
             fn wrapper(args: &[&dyn std::any::Any]) -> Option<Box<dyn std::any::Any>> {
                 infer($func_name as fn(&_) -> _, args)
             }
-            static FN_PTR: macros::problem_context::ErasedFn = wrapper;
+            static FN_PTR: problem_ctx::ErasedFn = wrapper;
 
-            inventory::submit!(macros::problem_context::Analysis {
+            inventory::submit!(problem_ctx::Analysis {
                 benchmark_name: file!(),
                 term_name: $term,
                 analysis: &[FN_PTR]
@@ -99,6 +90,12 @@ macro_rules! register_analysis {
     };
 }
 
+/// Macro to register a primitive implementation with the solver.
+/// It wraps the given function with a dynamic wrapper and uses
+/// the compiler to infer the generic types.
+/// Then it creates a isolated static Fn pointer and submits it to the inventory.
+/// This is a little cleaner than the analysis one, because there is no Fn pointer slice.
+/// However, a proc_macro could still infer the number of args and the types, improving UX.
 #[macro_export]
 macro_rules! register_primitive {
     (1, $func_name:ident) => {
@@ -123,9 +120,9 @@ macro_rules! register_primitive {
             fn wrapper(args: &[&dyn std::any::Any]) -> Option<Box<dyn std::any::Any>> {
                 infer($func_name as fn(&_) -> _, args)
             }
-            static FN_PTR: macros::problem_context::ErasedFn = wrapper;
+            static FN_PTR: problem_ctx::ErasedFn = wrapper;
 
-            inventory::submit!(macros::problem_context::Primitive {
+            inventory::submit!(problem_ctx::Primitive {
                 benchmark_name: std::file!(),
                 func_name: stringify!($func_name),
                 primitive: &FN_PTR,
@@ -147,9 +144,9 @@ macro_rules! register_primitive {
             fn wrapper(args: &[&dyn std::any::Any]) -> Box<dyn std::any::Any> {
                 infer($func_name as fn(&_, &_) -> _, args)
             }
-            static FN_PTR: macros::problem_context::ErasedFn = wrapper;
+            static FN_PTR: problem_ctx::problem_context::ErasedFn = wrapper;
 
-            inventory::submit!(macros::problem_context::Primitive {
+            inventory::submit!(problem_ctx::problem_context::Primitive {
                 benchmark_name: std::file!(),
                 func_name: stringify!($func_name),
                 primitive: &FN_PTR,

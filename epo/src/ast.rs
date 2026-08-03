@@ -5,8 +5,8 @@
 //!
 //! This would benefit from more granular typing.
 //! For example a CostFunc should not take a vector of Terms,
-//! but rather a vector of (TermName Int) which is much more specific.
-//! This creates ambiguity for the person implementing it.
+//! but rather a vector of (TermName Func/Int) which is much more specific.
+//! Currently we are creating ambiguity for the person implementing this.
 //!
 //! We should also offer type checking the AST to make writing benchmarks easier.
 //! For example, names used in the cost function term list should
@@ -14,9 +14,9 @@
 
 use std::collections::HashMap;
 
-use crate::{AnalysisMap, PrimitiveMap, Result};
+use crate::{AnalysisBridge, PrimitiveBridge, Result};
 use benchmarks::math;
-use macros::problem_context::{Analysis, Primitive};
+use problem_ctx::{Analysis, Primitive};
 
 type Name = String;
 type CostDesc = String;
@@ -100,10 +100,10 @@ impl std::fmt::Display for Term {
 }
 
 pub struct Program {
-    pub sorts: Vec<Sort>,
     pub implementation_file: String,
-    pub analysis_impl: AnalysisMap,
-    pub primitive_impl: PrimitiveMap,
+    pub analysis_bridge: AnalysisBridge,
+    pub primitive_bridge: PrimitiveBridge,
+    pub sorts: Vec<Sort>,
     pub constructors: Vec<Constructor>,
     pub rewrites: Vec<Rewrite>,
     pub costfuncs: Vec<CostFunc>,
@@ -136,14 +136,14 @@ impl Program {
     }
 
     fn add_analysis(&mut self, analysis: &Analysis) -> Result<()> {
-        self.analysis_impl
+        self.analysis_bridge
             .map
             .insert(String::from(analysis.term_name), analysis.analysis);
         Ok(())
     }
 
     fn add_primitive(&mut self, primitive: &Primitive) -> Result<()> {
-        self.primitive_impl
+        self.primitive_bridge
             .map
             .insert(String::from(primitive.func_name), primitive.primitive);
         Ok(())
@@ -151,14 +151,14 @@ impl Program {
 
     fn from_decls(decls: Vec<Decl>) -> Result<Self> {
         let mut prog = Program {
-            sorts: vec![],
             implementation_file: String::new(),
-            analysis_impl: AnalysisMap {
+            analysis_bridge: AnalysisBridge {
                 map: HashMap::new(),
             },
-            primitive_impl: PrimitiveMap {
+            primitive_bridge: PrimitiveBridge {
                 map: HashMap::new(),
             },
+            sorts: vec![],
             constructors: vec![],
             rewrites: vec![],
             costfuncs: vec![],
@@ -171,9 +171,11 @@ impl Program {
 
         // Hack to ensure the benchmarks crate doesnt get trimmed.
         // Definitely need to solve this later because users will add more benchmark files
-        // Maybe move away from inventory and write my own plugin registry
+        // Move away from inventory and write custom own plugin registry
         math::dummy();
 
+        // Analysis and primitives are scoped based on benchmark file
+        // This means one program per benchmark
         for analysis in inventory::iter::<Analysis> {
             if analysis.benchmark_name == prog.implementation_file {
                 prog.add_analysis(analysis)?;

@@ -253,8 +253,8 @@ pub fn parse_decls(input: &str) -> Result<Vec<Decl>> {
     sexp_parser::parse_decls(input).map_err(|e| e.to_string())
 }
 
-/// Parsing unit tests with limited but sufficient coverage.
-/// More edge cases will be handled by integration tests down the pipeline.
+// Parsing unit tests with limited but sufficient coverage.
+// More edge cases will be handled by integration tests down the pipeline.
 #[cfg(test)]
 mod tests {
     use super::*;

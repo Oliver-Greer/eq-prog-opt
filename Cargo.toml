@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "epo",
-    "benchmarks"
-    #"parser"
+    "benchmarks",
+    "problem_ctx"
 ]
 resolver = "3"

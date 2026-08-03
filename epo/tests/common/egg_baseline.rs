@@ -1,6 +1,6 @@
 //! Simple egg baseline for running dynamic benchmarks
 
-// Need this to 
+// Need this to prevent the test crate from getting mauled by rustc :(
 #![allow(dead_code)]
 
 use std::any::Any;
@@ -9,9 +9,8 @@ use ::egg::{AstSize, DidMerge, ENodeOrVar, Extractor, RecExpr};
 use ::egg::{Id, Pattern, PatternAst, Runner};
 use ::egg::{Symbol, define_language};
 
-use epo::Solver;
 use epo::ast::*;
-use epo::{AnalysisMap, Result};
+use epo::{AnalysisBridge, PrimitiveBridge, Result, Solver};
 
 define_language! {
     pub enum Lang {
@@ -25,7 +24,7 @@ type EggRewrite = ::egg::Rewrite<Lang, MyAnalysis>;
 
 #[derive(Default)]
 struct MyAnalysis {
-    map: AnalysisMap,
+    map: AnalysisBridge,
 }
 
 impl ::egg::Analysis<Lang> for MyAnalysis {
@@ -40,7 +39,7 @@ impl ::egg::Analysis<Lang> for MyAnalysis {
                     .filter_map(|id| egraph[*id].data.as_ref())
                     .map(|c| &**c as &dyn Any)
                     .collect();
-                egraph.analysis.map.evaluate_node(&name.to_string(), &args)
+                egraph.analysis.map.evaluate_term(&name.to_string(), &args)
             }
         }
     }
@@ -69,7 +68,7 @@ impl ::egg::Analysis<Lang> for MyAnalysis {
 #[derive(Default)]
 pub struct EggSolver {
     rules: Vec<EggRewrite>,
-    analysis: AnalysisMap,
+    analysis: AnalysisBridge,
     runner: Runner<Lang, MyAnalysis>,
 }
 
@@ -123,12 +122,12 @@ impl Solver for EggSolver {
         Ok(())
     }
 
-    fn declare_analysis(&mut self, analysis_map: AnalysisMap) -> Result<()> {
+    fn declare_analysis(&mut self, analysis_map: AnalysisBridge) -> Result<()> {
         self.analysis = analysis_map;
         Ok(())
     }
 
-    fn declare_primitive(&mut self, _primitive_map: epo::PrimitiveMap) -> Result<()> {
+    fn declare_primitive(&mut self, _primitive_map: PrimitiveBridge) -> Result<()> {
         Ok(())
     }
 
