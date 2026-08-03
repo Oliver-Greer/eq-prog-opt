@@ -1,29 +1,31 @@
 //! AST Representation for a benchmark file
-//! 
+//!
 //! The base node is a Term which can be a variable, an integer, or a call expression.
 //! All other nodes are various kinds of declaration.
-//! 
+//!
 //! This would benefit from more granular typing.
 //! For example a CostFunc should not take a vector of Terms,
-//! but rather a vector of (TermName Int) which is much more specific.
-//! This creates ambiguity for the person implementing it.
-//! 
+//! but rather a vector of (TermName Func/Int) which is much more specific.
+//! Currently we are creating ambiguity for the person implementing this.
+//!
 //! We should also offer type checking the AST to make writing benchmarks easier.
-//! For example, names used in the cost function term list should 
+//! For example, names used in the cost function term list should
 //! be declared previously as nodes.
 
-use crate::Result;
+use std::collections::HashMap;
+
+use crate::{AnalysisBridge, PrimitiveBridge, Result};
+use benchmarks::math;
+use problem_ctx::{Analysis, IntType, Primitive};
 
 type Name = String;
 type CostDesc = String;
 
 #[derive(PartialEq, Debug)]
 pub enum Decl {
+    ImplementationFile(String),
     Sort(Sort),
     Constructor(Constructor),
-    Primitive(Primitive),
-    Lattice(Lattice),
-    Analysis(Analysis),
     Rewrite(Rewrite),
     CostFunc(CostFunc),
     Optimize(Optimize),
@@ -42,30 +44,6 @@ pub struct Constructor {
 }
 
 #[derive(PartialEq, Debug)]
-pub struct Primitive {
-    pub name: Name,
-    pub args: Vec<Name>,
-    pub ret: Name,
-    pub desc: Option<String>
-}
-
-#[derive(PartialEq, Debug)]
-pub struct Lattice {
-    pub name: Name,
-    pub desc: Option<String>,
-    pub make: Option<String>,
-    pub merge: Option<String>,
-}
-
-#[derive(PartialEq, Debug)]
-pub struct Analysis {
-    pub name: Name,
-    pub args: Vec<Name>,
-    pub ret: Name,
-    pub desc: Option<String>
-}
-
-#[derive(PartialEq, Debug)]
 pub enum Rewrite {
     Rewrite(RewriteVariant),
     BiRewrite(RewriteVariant),
@@ -76,7 +54,7 @@ pub struct RewriteVariant {
     pub name: Name,
     pub lhs: Term,
     pub rhs: Term,
-    pub cond: Option<Term>
+    pub cond: Option<Term>,
 }
 
 #[derive(PartialEq, Debug)]
@@ -93,7 +71,6 @@ pub struct CostFunc {
     pub costs: Option<Vec<Term>>,
 }
 
-
 #[derive(PartialEq, Debug)]
 pub struct Optimize {
     pub term: Term,
@@ -102,7 +79,7 @@ pub struct Optimize {
 #[derive(PartialEq, Debug)]
 pub enum Term {
     Var(Name),
-    IntLit(i64),
+    IntLit(IntType),
     Call(Name, Vec<Term>),
 }
 
@@ -123,57 +100,94 @@ impl std::fmt::Display for Term {
 }
 
 pub struct Program {
+    pub implementation_file: String,
+    pub analysis_bridge: AnalysisBridge,
+    pub primitive_bridge: PrimitiveBridge,
     pub sorts: Vec<Sort>,
     pub constructors: Vec<Constructor>,
-    pub primitives: Vec<Primitive>,
-    pub lattices: Vec<Lattice>,
-    pub analysis: Vec<Analysis>,
     pub rewrites: Vec<Rewrite>,
     pub costfuncs: Vec<CostFunc>,
     pub optimize: Vec<Optimize>,
 }
 
 impl Program {
-    pub fn add_decl(&mut self, decl: Decl) -> Result<()> {
+    fn add_decl(&mut self, decl: Decl) -> Result<()> {
         match decl {
             Decl::Sort(s) => self.sorts.push(s),
+            Decl::ImplementationFile(s) => self.implementation_file = s,
             Decl::Constructor(c) => self.constructors.push(c),
-            Decl::Primitive(p) => self.primitives.push(p),
-            Decl::Lattice(l) => self.lattices.push(l),
-            Decl::Analysis(a) => self.analysis.push(a),
             Decl::Rewrite(mut r) => {
                 match &mut r {
                     Rewrite::Rewrite(re) => {
                         // unique-ify rewrite names by appending the current number of rewrites
                         re.name = format!("{}.{}", re.name, self.rewrites.len());
-                    },
+                    }
                     Rewrite::BiRewrite(bire) => {
                         // unique-ify rewrite names by appending the current number of rewrites
                         bire.name = format!("{}.{}", bire.name, self.rewrites.len());
                     }
                 };
                 self.rewrites.push(r)
-            },
+            }
             Decl::CostFunc(c) => self.costfuncs.push(c),
             Decl::Optimize(o) => self.optimize.push(o),
         }
         Ok(())
     }
 
-    pub fn from_decls(decls: Vec<Decl>) -> Result<Self> {
+    fn add_analysis(&mut self, analysis: &Analysis) -> Result<()> {
+        self.analysis_bridge
+            .map
+            .insert(String::from(analysis.term_name), analysis.analysis);
+        Ok(())
+    }
+
+    fn add_primitive(&mut self, primitive: &Primitive) -> Result<()> {
+        self.primitive_bridge
+            .map
+            .insert(String::from(primitive.func_name), primitive.primitive);
+        Ok(())
+    }
+
+    fn from_decls(decls: Vec<Decl>) -> Result<Self> {
         let mut prog = Program {
+            implementation_file: String::new(),
+            analysis_bridge: AnalysisBridge {
+                map: HashMap::new(),
+            },
+            primitive_bridge: PrimitiveBridge {
+                map: HashMap::new(),
+            },
             sorts: vec![],
             constructors: vec![],
-            primitives: vec![],
-            lattices: vec![],
-            analysis: vec![],
             rewrites: vec![],
             costfuncs: vec![],
             optimize: vec![],
         };
+
         for decl in decls {
             prog.add_decl(decl)?;
         }
+
+        // Hack to ensure the benchmarks crate doesnt get trimmed.
+        // Definitely need to solve this later because users will add more benchmark files
+        // Move away from inventory and write custom own plugin registry
+        math::dummy();
+
+        // Analysis and primitives are scoped based on benchmark file
+        // This means one program per benchmark
+        for analysis in inventory::iter::<Analysis> {
+            if analysis.benchmark_name == prog.implementation_file {
+                prog.add_analysis(analysis)?;
+            }
+        }
+
+        for primitive in inventory::iter::<Primitive> {
+            if primitive.benchmark_name == prog.implementation_file {
+                prog.add_primitive(primitive)?;
+            }
+        }
+
         Ok(prog)
     }
 

@@ -9,7 +9,7 @@ mod tests {
 
     #[test]
     fn test_math() {
-        let results = EggSolver::parse_file_and_run("../benchmarks/math.lisp").unwrap();
+        let results = EggSolver::parse_file_and_run("../benchmarks/test.lisp").unwrap();
         for result in results {
             println!("Result: {}", result);
         }
