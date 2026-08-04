@@ -21,28 +21,56 @@ use problem_ctx::{Analysis, IntType, Primitive};
 type Name = String;
 type CostDesc = String;
 
+
+/// `Decl` outlines all possible declarations in the benchmark DSL.
 #[derive(PartialEq, Debug)]
 pub enum Decl {
+    /// `ImplementationFile` contains the path to the .rs file 
+    /// that implements analysis and primitives for this benchmark if any.
     ImplementationFile(String),
+
+    /// `Sort` declares a scoped type for a given benchmark.
     Sort(Sort),
+
+    /// `Constructor` creates a node to be referenced in 
+    /// rust implementations, `Rewrite`, `CostFunc`, and `Optimize` declarations.
     Constructor(Constructor),
+
+    /// `Rewrite` declares equivalents patterns in this benchmark.
+    /// Rewrites can be bidirectional or unidirectional.
     Rewrite(Rewrite),
+
+    /// `CostFunc` declares a cost function that can be used in an `Optimize` `Decl`.
     CostFunc(CostFunc),
+
+    /// `Optimize` declares terms that the solver needs to simplify.
     Optimize(Optimize),
 }
 
+
+/// A `Sort` is a simple type declaration.
 #[derive(PartialEq, Debug)]
 pub struct Sort {
+    /// The type as a string literal.
     pub name: Name,
 }
 
+
+/// `Constructor` declares a DSL node with a functional representation.
 #[derive(PartialEq, Debug)]
 pub struct Constructor {
+    /// Name of the node as a string literal.
     pub name: Name,
+
+    /// A vector of Sorts the argument should take in, referenced as strings.
     pub args: Vec<Name>,
+
+    /// The Sort this node should return.
     pub ret: Name,
 }
 
+
+/// 
 #[derive(PartialEq, Debug)]
 pub enum Rewrite {
     Rewrite(RewriteVariant),
