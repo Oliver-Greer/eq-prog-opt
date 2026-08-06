@@ -21,42 +21,86 @@ use problem_ctx::{Analysis, IntType, Primitive};
 type Name = String;
 type CostDesc = String;
 
+
+/// [`Decl`] outlines all possible declarations in the benchmark DSL.
 #[derive(PartialEq, Debug)]
 pub enum Decl {
+    /// `ImplementationFile` contains the path to the .rs file 
+    /// that implements analysis and primitives for this benchmark if any.
     ImplementationFile(String),
+
+    /// [`Sort`] declares a scoped type for a given benchmark.
     Sort(Sort),
+
+    /// [`Constructor`] creates a node to be referenced in 
+    /// rust implementations, [`Rewrite`], [`CostFunc`], and [`Optimize`] declarations.
     Constructor(Constructor),
+
+    /// [`Rewrite`] declares equivalents patterns in this benchmark.
+    /// Rewrites can be bidirectional or unidirectional.
     Rewrite(Rewrite),
+
+    /// [`CostFunc`] declares a cost function that can be used in an [`Optimize`] [`Decl`].
     CostFunc(CostFunc),
+
+    /// [`Optimize`] declares terms that the solver needs to simplify.
     Optimize(Optimize),
 }
 
+
+/// A [`Sort`] is a simple type declaration.
 #[derive(PartialEq, Debug)]
 pub struct Sort {
+    /// The type as a string literal.
     pub name: Name,
 }
 
+
+/// [`Constructor`] declares a DSL node with a functional representation.
 #[derive(PartialEq, Debug)]
 pub struct Constructor {
+    /// Name of the node as a string literal.
     pub name: Name,
+
+    /// A vector of Sorts the argument should take in, referenced as strings.
     pub args: Vec<Name>,
+
+    /// The [`Sort`] this node should return.
     pub ret: Name,
 }
 
+
+/// A [`Rewrite`] can be bidirectional or unidirectional.
 #[derive(PartialEq, Debug)]
 pub enum Rewrite {
+    /// A unidirectional [`Rewrite`].
     Rewrite(RewriteVariant),
+
+    /// A bidirectional [`Rewrite`].
     BiRewrite(RewriteVariant),
 }
 
+
+/// Both the [`Rewrite`] num variants have the same fields, 
+/// wrapped in a [`RewriteVariant`] struct.
 #[derive(PartialEq, Debug)]
 pub struct RewriteVariant {
+    /// Name of the [`Rewrite`] for proof explanations.
     pub name: Name,
+
+    /// Lefthand side [`Term`] for searching/applying.
     pub lhs: Term,
+
+    /// Righthand side [`Term`] for applying/applying.
     pub rhs: Term,
+
+    /// An optional [`Term`] that evaluates to `true` or `false`.
+    /// Rewrites are conditional on the result.
     pub cond: Option<Term>,
 }
 
+
+/// this will be redesigned shortly. N/A
 #[derive(PartialEq, Debug)]
 pub enum CostFuncType {
     Tree,
@@ -64,6 +108,8 @@ pub enum CostFuncType {
     Custom(CostDesc),
 }
 
+
+/// this will be redesigned shortly. N/A
 #[derive(PartialEq, Debug)]
 pub struct CostFunc {
     pub name: Name,
@@ -71,25 +117,39 @@ pub struct CostFunc {
     pub costs: Option<Vec<Term>>,
 }
 
+
+/// [`Optimize`] struct that denotes a required [`Term`] to simplify.
 #[derive(PartialEq, Debug)]
 pub struct Optimize {
+    /// The [`Term`] to simplify.
     pub term: Term,
 }
 
+
+/// [`Term`] is the base ast node.
 #[derive(PartialEq, Debug)]
 pub enum Term {
+    /// A variable that can be used symbolically in rewrites.
     Var(Name),
+
+    /// A Constant integer literal with the type set globally by [`IntType`].
     IntLit(IntType),
+
+    /// A generic representation of all other terms.
+    /// These are typically functional nodes defined by [`Constructor`].
     Call(Name, Vec<Term>),
 }
 
+
 impl std::fmt::Display for Term {
+    /// Pretty print a term for debugging and [`Optimize`] results.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Term::Var(v) => write!(f, "{}", v),
             Term::IntLit(n) => write!(f, "{}", n),
             Term::Call(func, args) => {
                 write!(f, "({}", func)?;
+                // print all child terms
                 for arg in args {
                     write!(f, " {}", arg)?;
                 }
@@ -99,18 +159,47 @@ impl std::fmt::Display for Term {
     }
 }
 
+
+/// The root of all benchmark files.
+/// [`Program`] wraps all declarations and bridges to related .rs files.
 pub struct Program {
-    pub implementation_file: String,
+    /// The filename of this benchmark. Used for scoping types .rs files.
+    pub implementation_file: Name,
+
+    /// The [`AnalysisBridge`] is a hashmap from node names to function pointers.
+    /// The functions are collected from benchmark associated .rs files, 
+    /// and scoped appropriately.
     pub analysis_bridge: AnalysisBridge,
+
+    /// The [`PrimitiveBridge`] is a hashmap from node names to function pointers.
+    /// The functions are collected from benchmark associated .rs files, 
+    /// and scoped appropriately.
     pub primitive_bridge: PrimitiveBridge,
+
+    /// Vector of [`Sort`] structs used in this benchmark.
+    /// Most solvers won't need this.
     pub sorts: Vec<Sort>,
+
+    /// Vector of [`Constructor`] structs used in this benchmark.
+    /// Most solvers won't need this because the names are already 
+    /// in Call terms.
     pub constructors: Vec<Constructor>,
+
+    /// Vector of [`Rewrite`] structs used in this benchmark.
     pub rewrites: Vec<Rewrite>,
+
+    /// this will be redesigned shortly. N/A
     pub costfuncs: Vec<CostFunc>,
+
+    /// Vector of [`Optimize`] declarations for the solver to simplify.
     pub optimize: Vec<Optimize>,
 }
 
+
+/// Implementation of [`Program`] with methods to construct 
+/// all fields from a given benchmark file.
 impl Program {
+
     fn add_decl(&mut self, decl: Decl) -> Result<()> {
         match decl {
             Decl::Sort(s) => self.sorts.push(s),
@@ -135,6 +224,7 @@ impl Program {
         Ok(())
     }
 
+
     fn add_analysis(&mut self, analysis: &Analysis) -> Result<()> {
         self.analysis_bridge
             .map
@@ -142,12 +232,14 @@ impl Program {
         Ok(())
     }
 
+
     fn add_primitive(&mut self, primitive: &Primitive) -> Result<()> {
         self.primitive_bridge
             .map
             .insert(String::from(primitive.func_name), primitive.primitive);
         Ok(())
     }
+
 
     fn from_decls(decls: Vec<Decl>) -> Result<Self> {
         let mut prog = Program {
@@ -171,7 +263,7 @@ impl Program {
 
         // Hack to ensure the benchmarks crate doesnt get trimmed.
         // Definitely need to solve this later because users will add more benchmark files
-        // Move away from inventory and write custom own plugin registry
+        // Move away from inventory and write custom plugin registry/build.rs
         math::dummy();
 
         // Analysis and primitives are scoped based on benchmark file
@@ -191,11 +283,15 @@ impl Program {
         Ok(prog)
     }
 
+
+    /// Create a [`Program`] from a benchmark in string form.
     pub fn from_str(s: &str) -> Result<Self> {
         let decls: Vec<Decl> = crate::parse::parse_decls(s)?;
         Self::from_decls(decls)
     }
 
+
+    /// Create a [`Program`] from a benchmark filepath.
     pub fn from_file(path: &str) -> Result<Self> {
         let src: String = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
         Self::from_str(&src)
