@@ -16,8 +16,6 @@
 //!
 //! StringLiteral   -> '"' [_] '"'
 //!
-//! BoolLiteral     -> 'True' | 'False'
-//!
 //! TermAtom        -> BoolLiteral | IntegerLiteral | StringLiteral | Variable | Identifier
 //!
 //! TermList        -> '(' WhiteSpace Identifier (WhiteSpace Term)* WhiteSpace ')'
@@ -26,18 +24,28 @@
 //!
 //! SortDecl        -> '(' WhiteSpace 'sort' WhiteSpace Identifier WhiteSpace ')'
 //!
-//! FuncDecl        -> '(' WhiteSpace 'function' WhiteSpace Identifier WhiteSpace
+//! Constructor     -> '(' WhiteSpace 'constructor' WhiteSpace Identifier WhiteSpace
 //!                         '(' (WhiteSpace Identifier)* WhiteSpace ')'
-//!                         WhiteSpace Identifier (WhiteSpace Identifier WhiteSpace | WhiteSpace) ')'
+//!                         WhiteSpace Identifier WhiteSpace ')'
+//!
+//! Implementation        -> '(' WhiteSpace 'implementation-file' StringLit WhiteSpace ')'
+//!
 //!
 //! NOTE: Rewrites can also have names but those are left out here for conciseness
-//! RewriteDecl     -> '(' WhiteSpace ('rewrite' / 'birewrite')
+//! Bi/RewriteDecl  -> '(' WhiteSpace ('rewrite' / 'birewrite')
 //!                         WhiteSpace Term WhiteSpace Term WhiteSpace ')'
 //!                     | '(' WhiteSpace ('rewrite' / 'birewrite')
 //!                         WhiteSpace Term WhiteSpace Term WhiteSpace
 //!                         ":when" WhiteSpace Term WhiteSpace ')'
 //!
-//! Optimize        -> '(' WhiteSpace 'optimize' WhiteSpace Term WhiteSpace ')'
+//! CostType        -> '"Tree"' | '"Graph"' | StringLiteral
+//!
+//! NodeCost        -> '(' WhiteSpace Identifier WhiteSpace IntegerLiteral WhiteSpace ')'
+//!
+//! CostFunc        -> '(' WhiteSpace 'cost-fn' WhiteSpace Identifier WhiteSpace
+//!                     ':type' WhiteSpace CostType WhiteSpace (NodeCost WhiteSpace)* (WhiteSpace | '') ')'
+//!
+//! Optimize        -> '(' WhiteSpace 'optimize' WhiteSpace Term (WhiteSpace  ')'
 
 use crate::*;
 
@@ -55,9 +63,6 @@ peg::parser! {
         rule identifier() -> String
             = s:$((!(['(' | ')' | ';'] / ws_char()) [_])+) { s.to_string() }
 
-        rule bool_lit() -> bool
-            = b:$("True" / "False")     { b == "True"}
-
         rule int_lit() -> i64
             = n:$("-"? ['0'..='9']+)    {? n.parse().map_err(|_| "invalid integer") }
 
@@ -65,8 +70,7 @@ peg::parser! {
             = "\"" s:$([^'\"']*) "\""   { s.to_string() }
 
         rule term_atom() -> Term
-            = b:bool_lit()              { Term::BoolLit(b) }
-            / n:int_lit()               { Term::IntLit(n) }
+            = n:int_lit()               { Term::IntLit(n) }
             / s:string_lit()            { Term::Var(s) }
             / i:identifier()            { Term::Var(i) }
 
@@ -83,63 +87,133 @@ peg::parser! {
                 Decl::Sort(Sort { name })
             }
 
-        rule function_decl() -> Decl
-            = "(" ws() "function" ws() name:identifier() ws()
-              "(" args:(ws() a:identifier() { a })* ws() ")" ws()
-              ret:identifier() ws() cost:int_lit() ws() ")" {
-                Decl::Function(Function { name, args, ret, cost: Some(cost) })
-            }
-            / "(" ws() "function" ws() name:identifier() ws()
+        rule constructor_decl() -> Decl
+            = "(" ws() "constructor" ws() name:identifier() ws()
               "(" args:(ws() a:identifier() { a })* ws() ")" ws()
               ret:identifier() ws() ")" {
-                Decl::Function(Function { name, args, ret, cost: None })
+                Decl::Constructor(Constructor { name, args, ret })
+            }
+
+        rule implementation_decl() -> Decl
+            = "(" ws() "impl" ws() file_name:string_lit() ws() ")" {
+                Decl::ImplementationFile(file_name)
             }
 
         rule rewrite_decl() -> Decl
-            = "(" ws() bid:$("birewrite" / "rewrite") ws() name:identifier() ws() lhs:term()
+            = "(" ws() "rewrite" ws() name:identifier() ws() lhs:term()
                 ws() rhs:term() ws() ":when" ws() c:term() ws() ")" {
                 Decl::Rewrite(
-                    Rewrite {
+                    Rewrite::Rewrite( RewriteVariant {
                         name,
                         lhs,
                         rhs,
-                        cond: Some(c),
-                        is_bidirectional: bid == "birewrite"
-                    }
+                        cond: Some(c)
+                    })
                 )
             }
-            / "(" ws() bid:$("birewrite" / "rewrite") ws() name:identifier() ws() lhs:term() ws() rhs:term() ws() ")" {
+            / "(" ws() "rewrite" ws() name:identifier() ws() lhs:term() ws() rhs:term() ws() ")" {
                 Decl::Rewrite(
-                    Rewrite {
+                    Rewrite::Rewrite( RewriteVariant {
                         name,
                         lhs,
                         rhs,
-                        cond: None,
-                        is_bidirectional: bid == "birewrite"
-                    }
+                        cond: None
+                    })
                 )
             }
-            / "(" ws() bid:$("birewrite" / "rewrite") ws() lhs:term() ws() rhs:term() ws() ":when" ws()  c:term() ws() ")" {
+            / "(" ws() "rewrite" ws() lhs:term() ws() rhs:term() ws() ":when" ws() c:term() ws() ")" {
                 Decl::Rewrite(
-                    Rewrite {
-                        name: String::new(),
+                    Rewrite::Rewrite( RewriteVariant {
+                        name: String::from(""),
                         lhs,
                         rhs,
-                        cond: Some(c),
-                        is_bidirectional: bid == "birewrite"
-                    }
+                        cond: Some(c)
+                    })
                 )
             }
-            / "(" ws() bid:$("birewrite" / "rewrite") ws() lhs:term() ws() rhs:term() ws() ")" {
+            / "(" ws() "rewrite" ws() lhs:term() ws() rhs:term() ws() ")" {
                 Decl::Rewrite(
-                    Rewrite {
-                        name: String::new(),
+                    Rewrite::Rewrite( RewriteVariant {
+                        name: String::from(""),
                         lhs,
                         rhs,
-                        cond: None,
-                        is_bidirectional: bid == "birewrite"
-                    }
+                        cond: None
+                    })
                 )
+            }
+
+        rule birewrite_decl() -> Decl
+            = "(" ws() "birewrite" ws() name:identifier() ws() lhs:term()
+                ws() rhs:term() ws() ":when" ws() c:term() ws() ")" {
+                Decl::Rewrite(
+                    Rewrite::BiRewrite( RewriteVariant {
+                        name,
+                        lhs,
+                        rhs,
+                        cond: Some(c)
+                    })
+                )
+            }
+            / "(" ws() "birewrite" ws() name:identifier() ws() lhs:term() ws() rhs:term() ws() ")" {
+                Decl::Rewrite(
+                    Rewrite::BiRewrite( RewriteVariant {
+                        name,
+                        lhs,
+                        rhs,
+                        cond: None
+                    })
+                )
+            }
+            / "(" ws() "birewrite" ws() lhs:term() ws() rhs:term() ws() ":when" ws() c:term() ws() ")" {
+                Decl::Rewrite(
+                    Rewrite::BiRewrite( RewriteVariant {
+                        name: String::from(""),
+                        lhs,
+                        rhs,
+                        cond: Some(c)
+                    })
+                )
+            }
+            / "(" ws() "birewrite" ws() lhs:term() ws() rhs:term() ws() ")" {
+                Decl::Rewrite(
+                    Rewrite::BiRewrite( RewriteVariant {
+                        name: String::from(""),
+                        lhs,
+                        rhs,
+                        cond: None
+                    })
+                )
+            }
+
+        rule cost_term() -> Term
+            = "(" ws() name:identifier() ws() i:int_lit() ws() ")" {
+                Term::Call(
+                    name,
+                    vec![Term::IntLit(i)]
+                )
+            }
+
+        rule node_costs() -> Vec<Term>
+            = ws() items:(t:cost_term() ws() {t})* { items }
+
+        rule cost_decl() -> Decl
+            = "(" ws() "cost-fn" ws() name:identifier() ws() ":type" ws() "Tree"
+                ws() costs:node_costs() ws() ")" {
+                    Decl::CostFunc(
+                        CostFunc { name, func_type: CostFuncType::Tree, costs: Some(costs) }
+                    )
+            }
+            / "(" ws() "cost-fn" ws() name:identifier() ws() ":type" ws() "Graph"
+                ws() costs:node_costs() ws() ")" {
+                    Decl::CostFunc(
+                        CostFunc { name, func_type: CostFuncType::Graph, costs: Some(costs) }
+                    )
+            }
+            / "(" ws() "cost-fn" ws() name:identifier() ws() ":type" ws() desc:string_lit()
+                ws() ")" {
+                    Decl::CostFunc(
+                        CostFunc { name, func_type: CostFuncType::Custom(desc), costs: None }
+                    )
             }
 
         rule optimize_decl() -> Decl
@@ -149,8 +223,11 @@ peg::parser! {
 
         rule decl() -> Decl
             = sort_decl()
-            / function_decl()
+            / implementation_decl()
+            / constructor_decl()
             / rewrite_decl()
+            / birewrite_decl()
+            / cost_decl()
             / optimize_decl()
 
         pub rule parse_term() -> Term
@@ -176,6 +253,8 @@ pub fn parse_decls(input: &str) -> Result<Vec<Decl>> {
     sexp_parser::parse_decls(input).map_err(|e| e.to_string())
 }
 
+// Parsing unit tests with limited but sufficient coverage.
+// More edge cases will be handled by integration tests down the pipeline.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -193,29 +272,24 @@ mod tests {
     }
 
     #[test]
-    fn parse_func() {
+    fn parse_constructor() {
         // intentionally testing whitespace
-        // no cost
-        let input: &str = "(function \n MyName (Sort1 \n Sort2  )  Ret)";
+        let input: &str = "(constructor \n MyName (Sort1 \n Sort2  )  Ret)";
         let output: Result<Decl> = parse_decl(input);
-        let expected_output: Decl = Decl::Function(Function {
+        let expected_output: Decl = Decl::Constructor(Constructor {
             name: "MyName".to_string(),
             args: vec!["Sort1".to_string(), "Sort2".to_string()],
             ret: "Ret".to_string(),
-            cost: None,
         });
         assert!(output.is_ok());
         assert!(output.unwrap() == expected_output);
+    }
 
-        // with cost
-        let input: &str = "(function \n MyName (Sort1 \n Sort2  )  Ret 51)";
+    #[test]
+    fn parse_implementation() {
+        let input: &str = "( impl \t\t\n \"math.rs\")";
         let output: Result<Decl> = parse_decl(input);
-        let expected_output: Decl = Decl::Function(Function {
-            name: "MyName".to_string(),
-            args: vec!["Sort1".to_string(), "Sort2".to_string()],
-            ret: "Ret".to_string(),
-            cost: Some(51),
-        });
+        let expected_output: Decl = Decl::ImplementationFile("math.rs".to_string());
         assert!(output.is_ok());
         assert!(output.unwrap() == expected_output);
     }
@@ -226,13 +300,12 @@ mod tests {
         // one way rewrite with name
         let input: &str = "(rewrite \n MyName ?a \t ?b)";
         let output: Result<Decl> = parse_decl(input);
-        let expected_output: Decl = Decl::Rewrite(Rewrite {
+        let expected_output: Decl = Decl::Rewrite(Rewrite::Rewrite(RewriteVariant {
             name: "MyName".to_string(),
             lhs: Term::Var("?a".to_string()),
             rhs: Term::Var("?b".to_string()),
             cond: None,
-            is_bidirectional: false,
-        });
+        }));
         assert!(output.is_ok());
         assert!(output.unwrap() == expected_output);
     }
@@ -242,13 +315,12 @@ mod tests {
         // two way rewrite with name
         let input: &str = "(birewrite \n MyName ?a \t ?b)";
         let output: Result<Decl> = parse_decl(input);
-        let expected_output: Decl = Decl::Rewrite(Rewrite {
+        let expected_output: Decl = Decl::Rewrite(Rewrite::BiRewrite(RewriteVariant {
             name: "MyName".to_string(),
             lhs: Term::Var("?a".to_string()),
             rhs: Term::Var("?b".to_string()),
             cond: None,
-            is_bidirectional: true,
-        });
+        }));
         assert!(output.is_ok());
         assert!(output.unwrap() == expected_output);
     }
@@ -258,13 +330,12 @@ mod tests {
         // one way rewrite with name and cond
         let input: &str = "(rewrite \n MyName ?a \t ?b :when True)";
         let output: Result<Decl> = parse_decl(input);
-        let expected_output: Decl = Decl::Rewrite(Rewrite {
+        let expected_output: Decl = Decl::Rewrite(Rewrite::Rewrite(RewriteVariant {
             name: "MyName".to_string(),
             lhs: Term::Var("?a".to_string()),
             rhs: Term::Var("?b".to_string()),
-            cond: Some(Term::BoolLit(true)),
-            is_bidirectional: false,
-        });
+            cond: Some(Term::Var("True".to_string())),
+        }));
         assert!(output.is_ok());
         assert!(output.unwrap() == expected_output);
     }
@@ -274,12 +345,62 @@ mod tests {
         // one way rewrite without name and cond
         let input: &str = "(rewrite \n ?a \t ?b :when \t False)";
         let output: Result<Decl> = parse_decl(input);
-        let expected_output: Decl = Decl::Rewrite(Rewrite {
-            name: String::new(),
+        let expected_output: Decl = Decl::Rewrite(Rewrite::Rewrite(RewriteVariant {
+            name: String::from(""),
             lhs: Term::Var("?a".to_string()),
             rhs: Term::Var("?b".to_string()),
-            cond: Some(Term::BoolLit(false)),
-            is_bidirectional: false,
+            cond: Some(Term::Var("False".to_string())),
+        }));
+        assert!(output.is_ok());
+        assert!(output.unwrap() == expected_output);
+    }
+
+    #[test]
+    fn parse_tree_cost() {
+        let input: &str = "( cost-fn \n MyName :type Tree (Add 1) (Sub 1) (Der 10))";
+        let output: Result<Decl> = parse_decl(input);
+        let expected_output: Decl = Decl::CostFunc(CostFunc {
+            name: "MyName".to_string(),
+            func_type: CostFuncType::Tree,
+            costs: Some(vec![
+                Term::Call("Add".to_string(), vec![Term::IntLit(1)]),
+                Term::Call("Sub".to_string(), vec![Term::IntLit(1)]),
+                Term::Call("Der".to_string(), vec![Term::IntLit(10)]),
+            ]),
+        });
+        assert!(output.is_ok());
+        assert!(output.unwrap() == expected_output);
+    }
+
+    #[test]
+    fn parse_graph_cost() {
+        let input: &str = "( cost-fn \n MyName :type Graph 
+            (Add 1) 
+            (Sub 1) 
+            (Der 10))";
+        let output: Result<Decl> = parse_decl(input);
+        let expected_output: Decl = Decl::CostFunc(CostFunc {
+            name: "MyName".to_string(),
+            func_type: CostFuncType::Graph,
+            costs: Some(vec![
+                Term::Call("Add".to_string(), vec![Term::IntLit(1)]),
+                Term::Call("Sub".to_string(), vec![Term::IntLit(1)]),
+                Term::Call("Der".to_string(), vec![Term::IntLit(10)]),
+            ]),
+        });
+        assert!(output.is_ok());
+        assert!(output.unwrap() == expected_output);
+    }
+
+    #[test]
+    fn parse_custom_cost() {
+        // Testing whether I can start a custom string with Graph
+        let input: &str = "( cost-fn \n MyName :type \"Graph MyCustomGraphCost\"\t)";
+        let output: Result<Decl> = parse_decl(input);
+        let expected_output: Decl = Decl::CostFunc(CostFunc {
+            name: "MyName".to_string(),
+            func_type: CostFuncType::Custom("Graph MyCustomGraphCost".to_string()),
+            costs: None,
         });
         assert!(output.is_ok());
         assert!(output.unwrap() == expected_output);

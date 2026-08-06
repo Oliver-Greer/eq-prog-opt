@@ -1,19 +1,27 @@
 (sort Trig)
 
-(function Num (i64) Trig)
-(function Var (String) Trig)
-(function Tan (Trig) Trig)
-(function Cot (Trig) Trig)
-(function Sin (Trig) Trig)
-(function Cos (Trig) Trig)
-(function Div (Trig Trig) Trig) 
-(function Add (Trig Trig) Trig) 
-(function Sub (Trig Trig) Trig) 
-(function Mul (Trig Trig) Trig) 
-(function Pow (Trig Trig) Trig) 
-(function Sec (Trig) Trig)
-(function Csc (Trig) Trig)
 
+;; Direct implementation required
+(primitive IsNotZero (Trig) Bool
+	:desc "Return True if the input argument != 0, else False.")
+
+
+;; Direct implementation not required
+(constructor Num (i64) Trig)
+(constructor Var (String) Trig)
+(constructor Tan (Trig) Trig)
+(constructor Cot (Trig) Trig)
+(constructor Sin (Trig) Trig)
+(constructor Cos (Trig) Trig)
+(constructor Div (Trig Trig) Trig) 
+(constructor Add (Trig Trig) Trig) 
+(constructor Sub (Trig Trig) Trig) 
+(constructor Mul (Trig Trig) Trig) 
+(constructor Pow (Trig Trig) Trig) 
+(constructor Sec (Trig) Trig)
+(constructor Csc (Trig) Trig)
+
+;; Rewrites
 (birewrite (Tan ?x) (Div (Sin ?x) (Cos ?x)))
 (birewrite (Cot ?x) (Div (Cos ?x) (Sin ?x)))
 (birewrite (Sec ?x) (Div (Num 1) (Cos ?x)))
@@ -47,7 +55,7 @@
 (birewrite (Add (Div ?a ?b) (Div ?c ?b)) (Div (Add ?a ?c) ?b))
 (birewrite (Mul (Div ?a ?b) (Div ?c ?d)) (Div (Mul ?a ?c) (Mul ?b ?d)))
 (rewrite (Div (Num 1) (Div ?a ?b)) (Div ?b ?a))
-(rewrite (Div ?b ?a) (Div (Num 1) (Div ?a ?b)) :when (non-zero? ?b))
+(rewrite (Div ?b ?a) (Div (Num 1) (Div ?a ?b)) :when (IsNotZero ?b))
 (rewrite (Div (Mul ?a ?c) (Mul ?b ?c)) (Div ?a ?b))
 (birewrite (Div (Add ?a ?c) ?c) (Add (Div ?a ?c) (Num 1)))
 

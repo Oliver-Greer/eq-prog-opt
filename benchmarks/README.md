@@ -1,6 +1,6 @@
 # Benchmark DSL and File Specification
 
-This README provides a basis for understanding the benchmark file syntax and format, as well as what is expected of any implementation attempting to run the benchmark suite.
+This README provides a basis for understanding the benchmark file syntax and submission requirements, as well as what is expected of any implementation attempting to run the benchmark suite.
 
 Benchmark files provide an implementation agnostic DSL for common program optimization tasks. The syntax is heavily inspired by Egglog's S-Expr syntax with the exclusion of features that "bake in" an EqSat approach.
 
