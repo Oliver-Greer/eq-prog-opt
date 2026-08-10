@@ -77,7 +77,9 @@ TODO: Can primitives be referenced in RHS? Or only in the condition field?
 (birewrite (Div ?x ?x) (Num 1) :when (!= ?x 0))
 ```
 
-### Optimize
+TODO: Cost Functions. Let's discuss.
+
+#### Optimize
 
 The optimize declaration is usually the last part of the benchmark. It defines what term the solver should attempt to optimize using the defined rewrites and costs.
 
