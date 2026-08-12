@@ -4,6 +4,8 @@ This is a set of benchmarks for equational program optimization.
 
 # Worklist And Implementation Notes
 
+Below is a list of items to complete, as well as open questions covering many of the non-trivial parts of designing an implementation agnostic bench-marking suite.
+
 ## Rewrites
 
 - [x] Birewrites and rewrites implemented as a rewrite enum for solvers to match on.
