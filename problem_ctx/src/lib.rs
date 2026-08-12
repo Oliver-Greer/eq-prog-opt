@@ -14,6 +14,13 @@ use std::any::Any;
 // i32 and downcasts would fail. Better to make it universal.
 pub type IntType = i64;
 
+// We restrict floats to f64, otherwise users could use
+// f32 and downcasts would fail. Better to make it universal.
+pub type FloatType = f64;
+
+// Strings are renamed to StringType to avoid confusion with str.
+pub type StringType = String;
+
 /// ErasedFn is a type erased dynamic function pointer.
 /// Returns Option because analysis are defined on partial order lattices.
 pub type ErasedFn = fn(&[&dyn Any]) -> Option<Box<dyn Any>>;
