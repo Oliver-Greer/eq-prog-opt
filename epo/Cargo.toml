@@ -5,7 +5,6 @@ edition = "2024"
 
 [dependencies]
 problem_ctx = { path = "../problem_ctx" }
-benchmarks = { path = "../benchmarks" }
 peg = "0.8"
 inventory = "0.3"
 

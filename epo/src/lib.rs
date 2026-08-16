@@ -5,6 +5,7 @@
 
 pub mod ast;
 pub(crate) mod parse;
+pub(crate) mod benchmarks;
 
 use std::any::Any;
 use std::collections::HashMap;

@@ -15,7 +15,7 @@
 use std::collections::HashMap;
 
 use crate::{AnalysisBridge, PrimitiveBridge, Result};
-use benchmarks::math;
+use crate::benchmarks::*;
 use problem_ctx::{Analysis, IntType, Primitive};
 
 type Name = String;

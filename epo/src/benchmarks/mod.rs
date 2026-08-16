@@ -1,3 +1,3 @@
 //! Exports all the benchmark rust implementations.
 
-pub mod math;
+pub(crate) mod math;
