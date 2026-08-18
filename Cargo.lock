@@ -72,8 +72,18 @@ name = "epo"
 version = "0.1.0"
 dependencies = [
  "egg",
+ "epo_proc_macros",
  "peg",
- "proc_macros",
+]
+
+[[package]]
+name = "epo_proc_macros"
+version = "0.1.0"
+dependencies = [
+ "include_dir",
+ "proc-macro2",
+ "quote",
+ "syn 3.0.3",
 ]
 
 [[package]]
@@ -128,6 +138,25 @@ name = "hashbrown"
 version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
+
+[[package]]
+name = "include_dir"
+version = "0.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "923d117408f1e49d914f1a379a309cffe4f18c05cf4e3d12e613a15fc81bd0dd"
+dependencies = [
+ "include_dir_macros",
+]
+
+[[package]]
+name = "include_dir_macros"
+version = "0.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7cab85a7ed0bd5f0e76d93846e0147172bed2e2d3f859bcc33a8d9699cad1a75"
+dependencies = [
+ "proc-macro2",
+ "quote",
+]
 
 [[package]]
 name = "indexmap"
@@ -236,15 +265,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8fd00f0bb2e90d81d1044c2b32617f68fcb9fa3bb7640c23e9c748e53fb30934"
 dependencies = [
  "unicode-ident",
-]
-
-[[package]]
-name = "proc_macros"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 3.0.3",
 ]
 
 [[package]]

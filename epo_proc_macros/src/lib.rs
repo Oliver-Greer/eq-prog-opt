@@ -7,5 +7,5 @@ mod run_suite;
 pub fn run_suite(input: TokenStream) -> TokenStream {
     // input is the solver the user implements
     let solver_type = parse_macro_input!(input as Type);
-    todo!()
+    run_suite::run_suite_impl(solver_type).into()
 }

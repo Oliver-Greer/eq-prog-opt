@@ -168,7 +168,7 @@ impl std::fmt::Display for Term {
 /// [`Program`] wraps all declarations and bridges to related .rs files.
 pub struct Program {
     /// The filename of this benchmark. Used for scoping types .rs files.
-    pub implementation_file: Name,
+    pub implementation_file: Option<Name>,
 
     /// Vector of [`Sort`] structs used in this benchmark.
     /// Most solvers won't need this.
@@ -197,7 +197,7 @@ impl Program {
     fn add_decl(&mut self, decl: Decl) -> Result<()> {
         match decl {
             Decl::Sort(s) => self.sorts.push(s),
-            Decl::ImplementationFile(s) => self.implementation_file = s,
+            Decl::ImplementationFile(s) => self.implementation_file = Some(s),
             Decl::Constructor(c) => self.constructors.push(c),
             Decl::Rewrite(mut r) => {
                 match &mut r {
@@ -221,7 +221,7 @@ impl Program {
 
     fn from_decls(decls: Vec<Decl>) -> Result<Self> {
         let mut prog = Program {
-            implementation_file: String::new(),
+            implementation_file: None,
             sorts: vec![],
             constructors: vec![],
             rewrites: vec![],

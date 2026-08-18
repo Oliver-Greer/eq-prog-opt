@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-proc_macros = { path = "../proc_macros" }
+epo_proc_macros = { path = "../epo_proc_macros" }
 peg = "0.8"
 
 [dev-dependencies]

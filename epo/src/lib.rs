@@ -7,6 +7,8 @@ pub mod ast;
 pub mod context;
 pub(crate) mod parse;
 
+pub use epo_proc_macros::run_suite;
+
 use ast::*;
 
 use crate::context::Context;
