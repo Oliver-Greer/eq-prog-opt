@@ -1,3 +1,5 @@
+(impl "matmul")
+
 (sort Matrix)
 
 ;; analysis

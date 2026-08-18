@@ -1,6 +1,6 @@
 [workspace]
 members = [
     "epo",
-    "problem_ctx"
+    "proc_macros"
 ]
 resolver = "3"

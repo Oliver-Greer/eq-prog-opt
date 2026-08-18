@@ -12,11 +12,7 @@
 //! For example, names used in the cost function term list should
 //! be declared previously as nodes.
 
-use std::collections::HashMap;
-
-use crate::{AnalysisBridge, PrimitiveBridge, Result};
-use crate::benchmarks::*;
-use problem_ctx::{Analysis, IntType, Primitive};
+use crate::{FloatType, IntType, StringType, Result};
 
 type Name = String;
 type CostDesc = String;
@@ -132,9 +128,15 @@ pub enum Term {
     /// A variable that can be used symbolically in rewrites.
     Var(Name),
 
-    /// A Constant integer literal with the type set globally by [`IntType`].
+    /// A Constant integer literal with the type set globally [`IntType`]
     IntLit(IntType),
 
+    /// A Constant floating pointer type set globally by [`FloatType`]
+    FloatLit(FloatType),
+
+    /// A globally set string literally type defined by [`StringType`]
+    StringLit(StringType),
+    
     /// A generic representation of all other terms.
     /// These are typically functional nodes defined by [`Constructor`].
     Call(Name, Vec<Term>),
@@ -147,6 +149,8 @@ impl std::fmt::Display for Term {
         match self {
             Term::Var(v) => write!(f, "{}", v),
             Term::IntLit(n) => write!(f, "{}", n),
+            Term::FloatLit(fl) => write!(f, "{}", fl),
+            Term::StringLit(s) => write!(f, "{}", s),
             Term::Call(func, args) => {
                 write!(f, "({}", func)?;
                 // print all child terms
@@ -165,16 +169,6 @@ impl std::fmt::Display for Term {
 pub struct Program {
     /// The filename of this benchmark. Used for scoping types .rs files.
     pub implementation_file: Name,
-
-    /// The [`AnalysisBridge`] is a hashmap from node names to function pointers.
-    /// The functions are collected from benchmark associated .rs files, 
-    /// and scoped appropriately.
-    pub analysis_bridge: AnalysisBridge,
-
-    /// The [`PrimitiveBridge`] is a hashmap from node names to function pointers.
-    /// The functions are collected from benchmark associated .rs files, 
-    /// and scoped appropriately.
-    pub primitive_bridge: PrimitiveBridge,
 
     /// Vector of [`Sort`] structs used in this benchmark.
     /// Most solvers won't need this.
@@ -225,31 +219,9 @@ impl Program {
     }
 
 
-    fn add_analysis(&mut self, analysis: &Analysis) -> Result<()> {
-        self.analysis_bridge
-            .map
-            .insert(String::from(analysis.term_name), analysis.analysis);
-        Ok(())
-    }
-
-
-    fn add_primitive(&mut self, primitive: &Primitive) -> Result<()> {
-        self.primitive_bridge
-            .map
-            .insert(String::from(primitive.func_name), primitive.primitive);
-        Ok(())
-    }
-
-
     fn from_decls(decls: Vec<Decl>) -> Result<Self> {
         let mut prog = Program {
             implementation_file: String::new(),
-            analysis_bridge: AnalysisBridge {
-                map: HashMap::new(),
-            },
-            primitive_bridge: PrimitiveBridge {
-                map: HashMap::new(),
-            },
             sorts: vec![],
             constructors: vec![],
             rewrites: vec![],
@@ -259,25 +231,6 @@ impl Program {
 
         for decl in decls {
             prog.add_decl(decl)?;
-        }
-
-        // Hack to ensure the benchmarks crate doesnt get trimmed.
-        // Definitely need to solve this later because users will add more benchmark files
-        // Move away from inventory and write custom plugin registry/build.rs
-        math::dummy();
-
-        // Analysis and primitives are scoped based on benchmark file
-        // This means one program per benchmark
-        for analysis in inventory::iter::<Analysis> {
-            if analysis.benchmark_name == prog.implementation_file {
-                prog.add_analysis(analysis)?;
-            }
-        }
-
-        for primitive in inventory::iter::<Primitive> {
-            if primitive.benchmark_name == prog.implementation_file {
-                prog.add_primitive(primitive)?;
-            }
         }
 
         Ok(prog)

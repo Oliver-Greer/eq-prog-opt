@@ -10,12 +10,13 @@ use ::egg::{Id, Pattern, PatternAst, Runner};
 use ::egg::{Symbol, define_language};
 
 use epo::ast::*;
-use epo::{AnalysisBridge, PrimitiveBridge, Result, Solver};
-use problem_ctx::IntType;
+use epo::context::Context;
+use epo::{Result, Solver, IntType, StringType};
 
 define_language! {
     pub enum Lang {
         Num(IntType),
+        //String(StringType),
         Call(Symbol, Vec<Id>),
     }
 }
@@ -24,9 +25,7 @@ type EGraph = ::egg::EGraph<Lang, MyAnalysis>;
 type EggRewrite = ::egg::Rewrite<Lang, MyAnalysis>;
 
 #[derive(Default)]
-struct MyAnalysis {
-    map: AnalysisBridge,
-}
+struct MyAnalysis;
 
 impl ::egg::Analysis<Lang> for MyAnalysis {
     type Data = Option<Box<dyn Any>>;
@@ -35,12 +34,7 @@ impl ::egg::Analysis<Lang> for MyAnalysis {
         match enode {
             Lang::Num(n) => Some(Box::new(n.clone())),
             Lang::Call(name, ids) => {
-                let args: Vec<&dyn Any> = ids
-                    .iter()
-                    .filter_map(|id| egraph[*id].data.as_ref())
-                    .map(|c| &**c as &dyn Any)
-                    .collect();
-                egraph.analysis.map.evaluate_term(&name.to_string(), &args)
+                todo!()
             }
         }
     }
@@ -67,10 +61,10 @@ impl ::egg::Analysis<Lang> for MyAnalysis {
 }
 
 #[derive(Default)]
-pub struct EggSolver {
+pub struct EggSolver<C: Context> {
     rules: Vec<EggRewrite>,
-    analysis: AnalysisBridge,
     runner: Runner<Lang, MyAnalysis>,
+    _marker: std::marker::PhantomData<C>,
 }
 
 fn term_to_pattern(term: &Term) -> Pattern<Lang> {
@@ -97,6 +91,7 @@ fn term_to_pattern_rec(term: &Term, pat: &mut PatternAst<Lang>) -> Id {
             };
             pat.add(ENodeOrVar::ENode(node))
         }
+        _ => todo!()
     }
 }
 
@@ -110,21 +105,22 @@ fn recexpr_to_term(expr: &RecExpr<Lang>, id: Id) -> Term {
     }
 }
 
-impl Solver for EggSolver {
+impl<C: Context + Default> Solver<C> for EggSolver<C> {
     fn new() -> Self {
         Default::default()
     }
 
-    fn declare_analysis(&mut self, analysis_map: AnalysisBridge) -> Result<()> {
-        self.analysis = analysis_map;
-        Ok(())
+    fn declare_analysis(&mut self) -> Result<()> {
+        todo!()
+    }
+    
+    fn declare_primitives(&mut self) -> Result<()> {
+        todo!()
     }
 
-    fn declare_primitives(&mut self, _primitive_map: PrimitiveBridge) -> Result<()> {
-        Ok(())
-    }
-
-    fn declare_sort(&mut self, _sort: Sort) -> Result<()> {
+    fn declare_sort(&mut self, _sort: Sort) -> Result<()>
+    where C: Context
+    {
         Ok(())
     }
 
@@ -175,9 +171,7 @@ impl Solver for EggSolver {
             .collect();
 
         // Uses basic AstSize for now, which may not provide the best solution
-        self.runner = Runner::new(MyAnalysis {
-            map: self.analysis.clone(),
-        })
+        self.runner = Runner::new(MyAnalysis {})
         .with_expr(&term)
         .run(&self.rules);
         let ext = Extractor::new(&self.runner.egraph, AstSize);
