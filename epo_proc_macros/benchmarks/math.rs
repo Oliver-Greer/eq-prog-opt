@@ -2,7 +2,7 @@ use epo::context::{ProblemContext, Primitive, Cond};
 use epo::{IntType, primitive, condition};
 use std::collections::HashMap;
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug)]
 pub struct MyContext {
 	analysis_map: HashMap<String, Vec<Primitive<Self>>>,
     condition_map: HashMap<String, Cond<Self>>,

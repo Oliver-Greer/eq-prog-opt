@@ -28,9 +28,6 @@
 //!                         '(' (WhiteSpace Identifier)* WhiteSpace ')'
 //!                         WhiteSpace Identifier WhiteSpace ')'
 //!
-//! Implementation        -> '(' WhiteSpace 'implementation-file' StringLit WhiteSpace ')'
-//!
-//!
 //! NOTE: Rewrites can also have names but those are left out here for conciseness
 //! Bi/RewriteDecl  -> '(' WhiteSpace ('rewrite' / 'birewrite')
 //!                         WhiteSpace Term WhiteSpace Term WhiteSpace ')'
@@ -92,11 +89,6 @@ peg::parser! {
               "(" args:(ws() a:identifier() { a })* ws() ")" ws()
               ret:identifier() ws() ")" {
                 Decl::Constructor(Constructor { name, args, ret })
-            }
-
-        rule implementation_decl() -> Decl
-            = "(" ws() "impl" ws() file_name:string_lit() ws() ")" {
-                Decl::ImplementationFile(file_name)
             }
 
         rule rewrite_decl() -> Decl
@@ -223,7 +215,6 @@ peg::parser! {
 
         rule decl() -> Decl
             = sort_decl()
-            / implementation_decl()
             / constructor_decl()
             / rewrite_decl()
             / birewrite_decl()
@@ -281,15 +272,6 @@ mod tests {
             args: vec!["Sort1".to_string(), "Sort2".to_string()],
             ret: "Ret".to_string(),
         });
-        assert!(output.is_ok());
-        assert!(output.unwrap() == expected_output);
-    }
-
-    #[test]
-    fn parse_implementation() {
-        let input: &str = "( impl \t\t\n \"math.rs\")";
-        let output: Result<Decl> = parse_decl(input);
-        let expected_output: Decl = Decl::ImplementationFile("math.rs".to_string());
         assert!(output.is_ok());
         assert!(output.unwrap() == expected_output);
     }

@@ -1,17 +1,16 @@
-//! Simple egg baseline for running dynamic benchmarks
+//! Simple egg baseline for running benchmarks
 
-// Need this to prevent the test crate from getting mauled by rustc :(
-#![allow(dead_code)]
-
-use std::any::Any;
+use std::collections::HashMap;
+use std::marker::PhantomData;
 
 use ::egg::{AstSize, DidMerge, ENodeOrVar, Extractor, RecExpr};
 use ::egg::{Id, Pattern, PatternAst, Runner};
 use ::egg::{Symbol, define_language};
+use ::egg::EGraph;
 
 use epo::ast::*;
-use epo::context::Context;
-use epo::{Result, Solver, IntType, StringType};
+use epo::context::{ProblemContext};
+use epo::{IntType, Result, Solver};
 
 define_language! {
     pub enum Lang {
@@ -21,18 +20,21 @@ define_language! {
     }
 }
 
-type EGraph = ::egg::EGraph<Lang, MyAnalysis>;
-type EggRewrite = ::egg::Rewrite<Lang, MyAnalysis>;
-
 #[derive(Default)]
-struct MyAnalysis;
+struct MyAnalysis<C: ProblemContext> {
+    context: C,
+}
 
-impl ::egg::Analysis<Lang> for MyAnalysis {
-    type Data = Option<Box<dyn Any>>;
 
-    fn make(egraph: &mut EGraph, enode: &Lang, _id: Id) -> Self::Data {
+
+impl<C: ProblemContext> ::egg::Analysis<Lang> for MyAnalysis<C> {
+    type Data = Option<C::AnalysisTupleReturnType>;
+
+    fn make(egraph: &mut EGraph<Lang, MyAnalysis<C>>, enode: &Lang, _id: Id) -> Self::Data {
         match enode {
-            Lang::Num(n) => Some(Box::new(n.clone())),
+            Lang::Num(n) => {
+                C::get_all_analysis_results_as_tuple(&mut egraph.analysis.context, "Num", *n)
+            },
             Lang::Call(name, ids) => {
                 todo!()
             }
@@ -58,13 +60,28 @@ impl ::egg::Analysis<Lang> for MyAnalysis {
             }
         }
     }
+    
+    fn remake(egraph: &mut egg::EGraph<Lang, Self>, enode: &Lang, id: Id) -> Self::Data {
+        Self::make(egraph, enode, id)
+    }
+    
+    fn pre_union(
+        egraph: &egg::EGraph<Lang, Self>,
+        id1: Id,
+        id2: Id,
+        justification: &Option<egg::Justification>,
+    ) {
+    }
+    
+    fn allow_ematching_cycles(&self) -> bool {
+        true
+    }
 }
 
 #[derive(Default)]
-pub struct EggSolver<C: Context> {
+pub struct EggSolver {
     rules: Vec<EggRewrite>,
     runner: Runner<Lang, MyAnalysis>,
-    _marker: std::marker::PhantomData<C>,
 }
 
 fn term_to_pattern(term: &Term) -> Pattern<Lang> {
@@ -91,7 +108,7 @@ fn term_to_pattern_rec(term: &Term, pat: &mut PatternAst<Lang>) -> Id {
             };
             pat.add(ENodeOrVar::ENode(node))
         }
-        _ => todo!()
+        _ => todo!(),
     }
 }
 
@@ -105,22 +122,20 @@ fn recexpr_to_term(expr: &RecExpr<Lang>, id: Id) -> Term {
     }
 }
 
-impl<C: Context + Default> Solver<C> for EggSolver<C> {
+impl<C: ProblemContext> Solver<C> for EggSolver {
     fn new() -> Self {
         Default::default()
     }
 
-    fn declare_analysis(&mut self) -> Result<()> {
-        todo!()
-    }
-    
-    fn declare_primitives(&mut self) -> Result<()> {
+    fn declare_analysis(&mut self, context: C) -> Result<()> {
         todo!()
     }
 
-    fn declare_sort(&mut self, _sort: Sort) -> Result<()>
-    where C: Context
-    {
+    fn declare_primitives(&mut self, context: C) -> Result<()> {
+        todo!()
+    }
+
+    fn declare_sort(&mut self, _sort: Sort) -> Result<()> {
         Ok(())
     }
 
@@ -171,7 +186,9 @@ impl<C: Context + Default> Solver<C> for EggSolver<C> {
             .collect();
 
         // Uses basic AstSize for now, which may not provide the best solution
-        self.runner = Runner::new(MyAnalysis {})
+        self.runner = Runner::new(MyAnalysis {
+            _context: PhantomData,
+        })
         .with_expr(&term)
         .run(&self.rules);
         let ext = Extractor::new(&self.runner.egraph, AstSize);
