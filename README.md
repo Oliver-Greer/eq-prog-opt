@@ -10,59 +10,35 @@ Below is a list of items to complete, as well as open questions covering many of
 
 - [x] Birewrites and rewrites implemented as a rewrite enum for solvers to match on.
 - [X] Variables to pattern match represented by ?x.
-- [ ] Conditions: design struct that can represent conditions. Conditions should be implemented as functions in a .rs file and automatically collected into a registry. These functions should be automatically parsed into Fn pointers in the condition struct. We provide a map from `condName` to `Condition` Something like:
-
-```rust
-struct Condition<T> {
-  benchmarkName: String, // For scoping when collecting
-  conditionName: String,
-  conditionFn: fn(&[T]) -> bool,
-}
-```
+- [X] Conditions: Basic conditions are done, but they only return bool. Additionally there is no way in the library to recursively evaluate complex conditions containing multiple function calls. This has to be done by the Solver. There might be more work to do here.
 
 Open questions:
 
 - Do conditions need to return anything other than bool?
   - **Answer:** 
 - Should we wrap in a trait to define arg types and parameterize the solver over that type?
-  - **Answer:** 
+  - **Answer:** Arg types are restricted to i64 for ease of use. However the solver trait is still parameterized over the ProblemContext so that it can extract the mapping of string to                     function pointers. 
 - Should the solver be responsible for recursively evaluating the cond if nested, or should we have a trait do that work internally and have a condition have sub conditions?
-  - **Answer:** 
+  - **Answer:**
 - How do we automatically register conditions without dead code elim getting in the way?
-  - **Answer:** build.rs parsing?
+  - **Answer:** Resolved. Use proc_macro to collected and inline Context at compile time. Could be cleaner though.
 
 ### Analysis
 
-- [ ] Figure out a clean way of bridging analysis forms to the solver implementation. This requires answering the following questions:
+- [X] Figure out a clean way of bridging analysis forms to the solver implementation. This requires answering the following questions:
   - How to we ensure the analysis implementation can accommodate both multiple analysis as a tuple (egg approach) and multiple analysis as separate structs?
-    - **Answer:** We define an analysis trait with the requirement that we have one function per node. Something like:
-
-      ```rust
-      impl Analysis for MyAnalysis {
-        fn fold_add(a: type, b: type) -> Option<type> {
-          a + b
-        }
-      }
-
-      impl Analysis for OtherAnalysis {
-        fn min_add(a: othertype, b: othertype) -> Option<othertype> {
-          min(a, b)
-        }
-      }
-      ```
-
-      Types here are parameterized per impl. Then we have the problem context contain a vec of `<A: Analysis>` and we have the user relate function names to node names. The problem context can have a function that takes a node name and returns a vector of functions, but also a function that exposed the vector of analysis. This has issues but it could work.
+    - **Answer:** We don't. We restrict types to `i64` and require the solver to intern anything else. Still, the tuple problem is significant. Right now there is no easy way to have                          multiple analysis functions per node name.
 
 Open questions:
 
 - How do we resolve the fact that functions will have different signatures and therefore cannot be packed into a single vector without `dyn Any` or even more indirection?
-  - **Answer:** Restrict all types to `u64`? This may work.
+  - **Answer:** Restrict all types to `i64`. This is the native IntType anyways so Solver implementations are relatively straight forward.
 - In some benchmarks, we want a function from term -> term. An egraph doesn't have a concept of a term. This means we need to make the analysis generic over a term type defined by the solver, but that causes an issue. The solver is already parameterized over the problem context meaning the dependency is circular. I think this can be resolved if we are careful, but how?
   - **Answer:** 
 - If we do the above and have the solver define what a term is, we need a lightweight term api. What should this contain? What does a "term" need?
   - **Answer:** 
 - As far as I know, tuple layouts cannot be constructed at runtime. Therefore there is probably some amount of compile time definitions necessary if we use the above plan. How do we handle this?
-  - **Answer:**
+  - **Answer:** We may not support this and find another way around this. This seems to be a significant hurdle.
  
 ### Cost Functions
 
