@@ -70,7 +70,7 @@ Open questions:
 - [X] Give cost functions a name that can be referenced in optimize declarations.
 - [ ] Formally define the structure of a built-in cost function. Currently the plan is the following:
   - Cost functions have one or both of the following: A list of node names and IntLit for simple numerical costs per node or a list of node names and primitive function names that take in the nodes children and return a cost. Something like:
-    
+
     ```lisp
     (Add 1)
     (Sub 1)
@@ -84,7 +84,7 @@ Open questions:
     (Sub subCost)
     (Mul 10)
     ```
-    
+  
 Open questions:
 
 - If cost functions can reference functions defined in a .rs file, we need to add that to the problem context. How do we do this?

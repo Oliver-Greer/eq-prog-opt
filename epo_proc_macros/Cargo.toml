@@ -1,0 +1,19 @@
+[package]
+name = "epo_proc_macros"
+version = "0.1.0"
+edition = "2024"
+include = [
+    "src/**/*",
+    "benchmarks/**/*",
+    "Cargo.toml"
+]
+
+[lib]
+proc-macro = true
+
+[dependencies]
+epo = {path = "../epo"}
+syn = {version = "3.0", features = ["full"]}
+quote = "1.0"
+proc-macro2 = "1.0"
+

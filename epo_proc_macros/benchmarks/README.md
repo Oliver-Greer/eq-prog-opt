@@ -33,16 +33,6 @@ Strings consist of any sequence of characters between two double quotes.
 
 ### Declarations
 
-#### Impl
-
-The impl declaration is used to specify the filename of the .rs file that implements any analysis and/or primitive functions referenced in the benchmark. The impl declaration takes a single string argument, denoting the filename and file extension.
-
-The epo library automatically appends `"benchmarks/src/` onto the string given as an argument, so only the filename should be used. For example, if the implementation file was at `"benchmarks/src/math.rs`, the impl declaration would be:
-
-```
-(impl "math.rs")
-```
-
 #### Sort
 
 Custom types used in the benchmark files are declared with the `sort` keyword.
@@ -65,7 +55,7 @@ Constructor declarations take three arguments: the function name, the function a
 
 #### Rewrites
 
-Rewrites are declared with the either the `rewrite` keyword or the `birewrite` keyword. The difference between the two is self evident. Enforcing this difference correctly is intentionally left up to the user. Rewrites at minimum require a left hand side and a right hand size, with an optional condition as a third argument prefaced by `:when`. Rewrites can also be named. Symbolic variables that can match any term are defined with a `?`, reminiscent of the egg toolkit syntax.
+Rewrites are declared with the either the `rewrite` keyword or the `birewrite` keyword. The difference between the two is self evident. Enforcing this difference correctly is intentionally left up to the user. Rewrites at minimum require a left hand side and a right hand size, with an optional condition as a third argument prefaced by `:when`. Rewrites can also be named. Symbolic variables that can match any term are defined with a `?`.
 
 TODO: Can primitives be referenced in RHS? Or only in the condition field?
 
@@ -74,7 +64,7 @@ TODO: Can primitives be referenced in RHS? Or only in the condition field?
 (rewrite MulCancel (Mul (Num 0) ?a) (Num 0))
 
 ;; A birewrite with a conditional term
-(birewrite (Div ?x ?x) (Num 1) :when (!= ?x 0))
+(birewrite (Div ?x ?x) (Num 1) :when (Neq ?x 0))
 ```
 
 TODO: Cost Functions. Let's discuss.

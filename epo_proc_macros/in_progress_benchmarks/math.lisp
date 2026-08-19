@@ -1,22 +1,5 @@
 (sort Math)
 
-;; Direct implementation required
-(primitive + (i64 i64) i64)
-(primitive - (i64 i64) i64)
-(primitive * (i64 i64) i64)
-(primitive / (i64 i64) i64)
-(primitive IsNotZero (Math) Bool
-	:desc "Return True if the input argument != 0, else False.")
-
-(lattice Const 
-	:desc   "Option<i64> for constant folding analysis."
-	:make   "For Add, Sub, or Mul as Op return Some(Op(a, b)). 
-			 For Div reduce a / b to simplest fractional form.
-			 Else return None."
-	:merge  "Assert both constants are identical, otherwise error.")
-
-
-;; Direct implementation not required
 (constructor Num (i64) Math)
 (constructor Var (String) Math)
 (constructor Add (Math Math) Math)
