@@ -69,8 +69,12 @@ pub(crate) fn run_suite_impl(solver_type: Type) -> TokenStream {
                 let raw_lisp: &str = include_str!(#lisp_path_str);
                 let parsed: epo::Program = epo::Program::from_str(raw_lisp)
                     .expect("Failed to parse!");
-                let ctx = <#mod_ident::Context as Default>::default();
-                let results = epo::Solver::<#mod_ident::Context>::benchmark(&mut solver, ctx, parsed);
+                let mut ctx = <#mod_ident::Context as Default>::default();
+                <#mod_ident::Context>::set_analysis_map(&mut ctx);
+                let results = epo::Solver::<#mod_ident::Context>::benchmark(&mut solver, parsed, ctx).unwrap();
+                for result in results {
+                    println!("Result: {}", result);
+                }
             }
         });
     }

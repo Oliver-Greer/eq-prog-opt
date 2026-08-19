@@ -16,11 +16,11 @@ use crate::context::ProblemContext;
 pub type Result<T> = std::result::Result<T, String>;
 
 // We restrict integers to i64, otherwise users could use
-// i32 and downcasts would fail. Better to make it universal.
+// i32 and functions would fail. Better to make it universal.
 pub type IntType = i64;
 
 // We restrict floats to f64, otherwise users could use
-// f32 and downcasts would fail. Better to make it universal.
+// f32 and functions would fail. Better to make it universal.
 pub type FloatType = f64;
 
 // Strings are renamed to StringType to avoid confusion with str.
@@ -34,15 +34,9 @@ pub trait Solver<C: ProblemContext>: Sized {
     /// Creates a new solver.
     fn new() -> Self;
 
-    /// Declares an analysis for the solver. The AnalysisBridge is already
-    /// filled in. The job of the solver is to translate it into whatever
-    /// internal representation is needed.
-    fn declare_analysis(&mut self, context: C) -> Result<()>;
-
-    /// Declares primitives for the solver. The PrimitiveBridge is already
-    /// filled in. The job of the solver is to translate it into whatever
-    /// internal representation is needed.
-    fn declare_primitives(&mut self, context: C) -> Result<()>;
+    /// Sets up solver fields.
+    /// Generally this means analysis and primitive maps.
+    fn init_solver(&mut self, context: C) -> Result<()>;
 
     /// Declares a sort declaration.
     fn declare_sort(&mut self, sort: Sort) -> Result<()>;
@@ -63,11 +57,10 @@ pub trait Solver<C: ProblemContext>: Sized {
 
     /// Declares all declarations for the solver, initializing it's internal state.
     /// Then benchmark the solver on the given optimize declarations.
-    fn benchmark(&mut self, context: C, prog: Program) -> Result<Vec<Term>> {
+    fn benchmark(&mut self, prog: Program, context: C) -> Result<Vec<Term>> {
         // clone is fine here because we don't care about
         // anything other than the optimize calls
-        self.declare_analysis(context.clone())?;
-        self.declare_primitives(context.clone())?;
+        self.init_solver(context.clone())?;
 
         for sort in prog.sorts {
             self.declare_sort(sort)?;
