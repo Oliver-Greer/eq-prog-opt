@@ -27,7 +27,7 @@ Open questions:
 
 - [X] Figure out a clean way of bridging analysis forms to the solver implementation. This requires answering the following questions:
   - How to we ensure the analysis implementation can accommodate both multiple analysis as a tuple (egg approach) and multiple analysis as separate structs?
-    - **Answer:** We don't. We restrict types to `i64` and require the solver to intern anything else. Still, the tuple problem is significant. Right now there is no easy way to have                          multiple analysis functions per node name.
+    - **Answer:** We don't. We restrict types to `i64` and require the solver to intern anything else. We accept dynamic heap allocations with open arms and do multiple analysis through vectors rather than tuples.
 
 Open questions:
 
@@ -38,7 +38,7 @@ Open questions:
 - If we do the above and have the solver define what a term is, we need a lightweight term api. What should this contain? What does a "term" need?
   - **Answer:** 
 - As far as I know, tuple layouts cannot be constructed at runtime. Therefore there is probably some amount of compile time definitions necessary if we use the above plan. How do we handle this?
-  - **Answer:** We may not support this and find another way around this. This seems to be a significant hurdle.
+  - **Answer:** We use vectors instead.
  
 ### Cost Functions
 
