@@ -1,4 +1,6 @@
 //! Simple egg baseline for running benchmarks
+//! Note: This will be broken while we hone in the DSL specs
+//! This will need a custom searcher and applier to check primitives.
 
 use std::collections::HashMap;
 

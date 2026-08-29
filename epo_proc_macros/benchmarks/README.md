@@ -15,18 +15,18 @@ This specification aims to provide features rich enough to express at least the 
 
 ### Built-In Types
 
-The language accepts three built-in types: Int, Float and String.
+The language accepts three built-in types: Int, Bool and String.
 
 Integers are written as any sequence of digits 0 through 9 with no white-space in between and are internally represented as i64.
 
-Floats are written as two integers with a period separating them, or as a single integer followed by a period. Internally these are doubles or f64.
+Bools are either "True" or "False".
 
 Strings consist of any sequence of characters between two double quotes.
 
-```
+```lisp
 1 ;; this is a i64
 
-1.5 ;; this is a f64
+True ;; this is a bool
 
 "this is a string" ;; this is a String
 ```
@@ -37,11 +37,11 @@ Strings consist of any sequence of characters between two double quotes.
 
 Custom types used in the benchmark files are declared with the `sort` keyword.
 
-```
+```lisp
 (sort Math)
 ```
 
-Built-in types cannot be re-declared as sorts. These include `String`, `i64`, `f64`.
+Built-in types cannot be re-declared as sorts. These include `String`, `i64`, `bool`.
 
 #### Constructors
 
@@ -49,23 +49,34 @@ Constructors define a function that maps a list of argument sorts to a return so
 
 Constructor declarations take three arguments: the function name, the function argument types, and the function return type.
 
-```
+```lisp
 (constructor Name (ArgSort1 ArgSort2 ... ArgSortN) ReturnSort)
 ```
 
 #### Rewrites
 
-Rewrites are declared with the either the `rewrite` keyword or the `birewrite` keyword. The difference between the two is self evident. Enforcing this difference correctly is intentionally left up to the user. Rewrites at minimum require a left hand side and a right hand size, with an optional condition as a third argument prefaced by `:when`. Rewrites can also be named. Symbolic variables that can match any term are defined with a `?`.
+Rewrites are declared with the the `rewrite` keyword. Because this these benchmarks are equational program optimization problems, all rewrites should be interpreted as bidirectional identities. Rewrites at minimum require a left hand side and a right hand size, with an optional condition as a third argument prefaced by `:when`. Rewrites can also be named. Symbolic variables that can match any term are defined with a `?`.
 
-TODO: Can primitives be referenced in RHS? Or only in the condition field?
-
-```
+```lisp
 ;; A named rewrite
 (rewrite MulCancel (Mul (Num 0) ?a) (Num 0))
 
-;; A birewrite with a conditional term
-(birewrite (Div ?x ?x) (Num 1) :when (Neq ?x 0))
+;; A rewrite with a conditional term
+(rewrite (Div ?x ?x) (Num 1) :when (Neq ?x 0))
 ```
+
+#### Lattice
+
+Lattice types are important to define in problems that have analysis. Lattice types are declared identically to Sorts, but with the lattice keyword instead of the sort keyword:
+
+```lisp
+;; A partial order that denotes the lowerbound of some value.
+(lattice LowerBound)
+```
+
+#### Analysis
+
+
 
 TODO: Cost Functions. Let's discuss.
 
@@ -73,7 +84,7 @@ TODO: Cost Functions. Let's discuss.
 
 The optimize declaration is usually the last part of the benchmark. It defines what term the solver should attempt to optimize using the defined rewrites and costs.
 
-```
+```lisp
 (sort Math)
 (constructor Mul (Math Math) Math)
 (constructor Add (Math Math) Math)

@@ -29,9 +29,9 @@
 //!                         WhiteSpace Identifier WhiteSpace ')'
 //!
 //! NOTE: Rewrites can also have names but those are left out here for conciseness
-//! Bi/RewriteDecl  -> '(' WhiteSpace ('rewrite' / 'birewrite')
+//! RewriteDecl  -> '(' WhiteSpace ('rewrite')
 //!                         WhiteSpace Term WhiteSpace Term WhiteSpace ')'
-//!                     | '(' WhiteSpace ('rewrite' / 'birewrite')
+//!                     | '(' WhiteSpace ('rewrite')
 //!                         WhiteSpace Term WhiteSpace Term WhiteSpace
 //!                         ":when" WhiteSpace Term WhiteSpace ')'
 //!
@@ -95,86 +95,39 @@ peg::parser! {
             = "(" ws() "rewrite" ws() name:identifier() ws() lhs:term()
                 ws() rhs:term() ws() ":when" ws() c:term() ws() ")" {
                 Decl::Rewrite(
-                    Rewrite::Rewrite( RewriteVariant {
+                    Rewrite {
                         name,
                         lhs,
                         rhs,
                         cond: Some(c)
                     })
-                )
             }
             / "(" ws() "rewrite" ws() name:identifier() ws() lhs:term() ws() rhs:term() ws() ")" {
                 Decl::Rewrite(
-                    Rewrite::Rewrite( RewriteVariant {
+                    Rewrite {
                         name,
                         lhs,
                         rhs,
                         cond: None
                     })
-                )
             }
             / "(" ws() "rewrite" ws() lhs:term() ws() rhs:term() ws() ":when" ws() c:term() ws() ")" {
                 Decl::Rewrite(
-                    Rewrite::Rewrite( RewriteVariant {
+                    Rewrite {
                         name: String::from(""),
                         lhs,
                         rhs,
                         cond: Some(c)
                     })
-                )
             }
             / "(" ws() "rewrite" ws() lhs:term() ws() rhs:term() ws() ")" {
                 Decl::Rewrite(
-                    Rewrite::Rewrite( RewriteVariant {
+                    Rewrite {
                         name: String::from(""),
                         lhs,
                         rhs,
                         cond: None
                     })
-                )
-            }
-
-        rule birewrite_decl() -> Decl
-            = "(" ws() "birewrite" ws() name:identifier() ws() lhs:term()
-                ws() rhs:term() ws() ":when" ws() c:term() ws() ")" {
-                Decl::Rewrite(
-                    Rewrite::BiRewrite( RewriteVariant {
-                        name,
-                        lhs,
-                        rhs,
-                        cond: Some(c)
-                    })
-                )
-            }
-            / "(" ws() "birewrite" ws() name:identifier() ws() lhs:term() ws() rhs:term() ws() ")" {
-                Decl::Rewrite(
-                    Rewrite::BiRewrite( RewriteVariant {
-                        name,
-                        lhs,
-                        rhs,
-                        cond: None
-                    })
-                )
-            }
-            / "(" ws() "birewrite" ws() lhs:term() ws() rhs:term() ws() ":when" ws() c:term() ws() ")" {
-                Decl::Rewrite(
-                    Rewrite::BiRewrite( RewriteVariant {
-                        name: String::from(""),
-                        lhs,
-                        rhs,
-                        cond: Some(c)
-                    })
-                )
-            }
-            / "(" ws() "birewrite" ws() lhs:term() ws() rhs:term() ws() ")" {
-                Decl::Rewrite(
-                    Rewrite::BiRewrite( RewriteVariant {
-                        name: String::from(""),
-                        lhs,
-                        rhs,
-                        cond: None
-                    })
-                )
             }
 
         rule cost_term() -> Term
@@ -217,7 +170,6 @@ peg::parser! {
             = sort_decl()
             / constructor_decl()
             / rewrite_decl()
-            / birewrite_decl()
             / cost_decl()
             / optimize_decl()
 
@@ -282,27 +234,12 @@ mod tests {
         // one way rewrite with name
         let input: &str = "(rewrite \n MyName ?a \t ?b)";
         let output: Result<Decl> = parse_decl(input);
-        let expected_output: Decl = Decl::Rewrite(Rewrite::Rewrite(RewriteVariant {
+        let expected_output: Decl = Decl::Rewrite(Rewrite {
             name: "MyName".to_string(),
             lhs: Term::Var("?a".to_string()),
             rhs: Term::Var("?b".to_string()),
             cond: None,
-        }));
-        assert!(output.is_ok());
-        assert!(output.unwrap() == expected_output);
-    }
-
-    #[test]
-    fn parse_birewrite_with_name() {
-        // two way rewrite with name
-        let input: &str = "(birewrite \n MyName ?a \t ?b)";
-        let output: Result<Decl> = parse_decl(input);
-        let expected_output: Decl = Decl::Rewrite(Rewrite::BiRewrite(RewriteVariant {
-            name: "MyName".to_string(),
-            lhs: Term::Var("?a".to_string()),
-            rhs: Term::Var("?b".to_string()),
-            cond: None,
-        }));
+        });
         assert!(output.is_ok());
         assert!(output.unwrap() == expected_output);
     }
@@ -312,12 +249,12 @@ mod tests {
         // one way rewrite with name and cond
         let input: &str = "(rewrite \n MyName ?a \t ?b :when True)";
         let output: Result<Decl> = parse_decl(input);
-        let expected_output: Decl = Decl::Rewrite(Rewrite::Rewrite(RewriteVariant {
+        let expected_output: Decl = Decl::Rewrite(Rewrite {
             name: "MyName".to_string(),
             lhs: Term::Var("?a".to_string()),
             rhs: Term::Var("?b".to_string()),
             cond: Some(Term::Var("True".to_string())),
-        }));
+        });
         assert!(output.is_ok());
         assert!(output.unwrap() == expected_output);
     }
@@ -327,12 +264,12 @@ mod tests {
         // one way rewrite without name and cond
         let input: &str = "(rewrite \n ?a \t ?b :when \t False)";
         let output: Result<Decl> = parse_decl(input);
-        let expected_output: Decl = Decl::Rewrite(Rewrite::Rewrite(RewriteVariant {
+        let expected_output: Decl = Decl::Rewrite(Rewrite {
             name: String::from(""),
             lhs: Term::Var("?a".to_string()),
             rhs: Term::Var("?b".to_string()),
             cond: Some(Term::Var("False".to_string())),
-        }));
+        });
         assert!(output.is_ok());
         assert!(output.unwrap() == expected_output);
     }

@@ -58,20 +58,9 @@ pub struct Constructor {
     pub ret: Name,
 }
 
-/// A [`Rewrite`] can be bidirectional or unidirectional.
+/// All [`Rewrite`] in the program are bidirectional.
 #[derive(PartialEq, Debug)]
-pub enum Rewrite {
-    /// A unidirectional [`Rewrite`].
-    Rewrite(RewriteVariant),
-
-    /// A bidirectional [`Rewrite`].
-    BiRewrite(RewriteVariant),
-}
-
-/// Both the [`Rewrite`] num variants have the same fields,
-/// wrapped in a [`RewriteVariant`] struct.
-#[derive(PartialEq, Debug)]
-pub struct RewriteVariant {
+pub struct Rewrite {
     /// Name of the [`Rewrite`] for proof explanations.
     pub name: Name,
 
@@ -179,16 +168,7 @@ impl Program {
             Decl::Sort(s) => self.sorts.push(s),
             Decl::Constructor(c) => self.constructors.push(c),
             Decl::Rewrite(mut r) => {
-                match &mut r {
-                    Rewrite::Rewrite(re) => {
-                        // unique-ify rewrite names by appending the current number of rewrites
-                        re.name = format!("{}.{}", re.name, self.rewrites.len());
-                    }
-                    Rewrite::BiRewrite(bire) => {
-                        // unique-ify rewrite names by appending the current number of rewrites
-                        bire.name = format!("{}.{}", bire.name, self.rewrites.len());
-                    }
-                };
+                r.name = format!("{}.{}", r.name, self.rewrites.len());
                 self.rewrites.push(r)
             }
             Decl::CostFunc(c) => self.costfuncs.push(c),
